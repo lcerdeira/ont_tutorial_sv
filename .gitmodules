@@ -1,0 +1,3 @@
+[submodule "pipeline-structural-variation"]
+	path = pipeline-structural-variation
+	url = git@github.com:nanoporetech/pipeline-structural-variation.git
