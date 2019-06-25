@@ -1,0 +1,32 @@
+channels:
+    - bioconda
+    - conda-forge
+    - r
+    - sagrudd
+dependencies:
+  - minimap2
+  - sniffles
+  - samtools
+  - nanofilt
+  - nanoplot
+  - pybedtools
+  - bedtools
+  - pysam
+  - scipy
+  - tqdm
+  - vcftools
+  - vcflib
+  - make
+  - mosdepth
+  - pyfaidx
+  - pyvcf
+  - progressbar2
+  - python-Levenshtein
+  - intervaltree==2.1.0
+  - rtg-tools
+  - r
+  - imagemagick
+  - rstudio
+  - graphviz
+  - ont_tutorial_cas9 
+

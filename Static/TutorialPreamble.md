@@ -1,24 +1,18 @@
 # Statement of tutorial objectives
 
-The aim of this tutorial is to demonstrate a workflow for mapping long DNA sequence reads to a reference genome, and to evaluate the performance of a Cas9 based target enrichment strategy. This workflow is suitable for Oxford Nanopore fastq sequence collections and requires a reference genome and a BED file of target coordinates.
+The aim of this tutorial is to demonstrate a workflow for discovering and characterising genomic structural variations. This is acheived by mapping Nanopore long sequence reads to a reference genome and evaluating discordant mapping coordinates with the **`Sniffles`** software. This version of the tutorial may be used to identify large insertion and deletion events.
 
 The tutorial is packaged with example data, and the workflow can be reproduced to address questions such as
 
 * How many sequence reads map to the reference genome?
-* What is the depth of coverage for reads that map to pre-defined target regions?
-* What is the background depth of coverage for the non-targetted genomic regions?
-* Is there evidence for off-target enrichment of genomic regions?
-* How has the Cas9 based target-enrichment worked for **`HTT`**, our gene of interest?
+* What is the depth of coverage across the genome
 
-Editing the workflow's configuration file, **`config.yaml`**, will allow the analyses to be run using different DNA sequence collections, reference genomes, and with different BED files that define the regions of interest.
+
+Editing the workflow's configuration file, **`config.yml`**, will allow the analyses to be run using different DNA sequence collections, reference genomes, and with different parameters to tune the structural variation discovery workflow.
 
 ## What will this tutorial produce?
 
 * A rich HTML format report containing summary statistics and figures highlighting performance of the enrichment protocol
-* **`Microsoft Excel`** format files containing coordinates and summary statistics for on-target regions
-* **`Fastq`** format file containing reads that correspond to each of the target regions specified
-* **`Microsoft Excel`** format files containing summary statistics for sequence regions defined as showing off-target enrichment
-* **`Fastq`** format sequence file containing reads that were classified as off-target enrichment
 * **`Coordinates`** and instructions for reviewing candidate genomic regions with **`IGV`** the Integrated Genomics Viewer
 
 
@@ -27,9 +21,8 @@ Editing the workflow's configuration file, **`config.yaml`**, will allow the ana
 * **`conda`** for management of bioinformatics software installations
 * **`snakemake`** for managing the bioinformatics workflow
 * **`minimap2`** for mapping sequence reads to reference genome
-* **`samtools`** for SAM/BAM handling and mapping statistics
+* **`sniffles`** for structural variation calling
 * **`RSamtools`** and **`GenomicAlignments`**; R software for parsing BAM files
-* **`seqtk`** for writing out the subseq of sequence reads that map to the target region
 * **`IGV`** for visualising mapping characteristics at specific genomic regions
 
 ## The computational requirements include: 
@@ -50,23 +43,23 @@ Editing the workflow's configuration file, **`config.yaml`**, will allow the ana
     bash Miniconda3-latest-Linux-x86_64.sh
     bash
 ```
-2. Download Nanopore tutorial & example files into a folder named `ont_tutorial_cas9`. This tutorial requires the **`git-lfs`** large file support capabilities, which should be installed through **`Conda`** first
+2. Download Nanopore tutorial & example files into a folder named `ont_tutorial_sv`. This tutorial requires the **`git-lfs`** large file support capabilities, which should be installed through **`Conda`** first
 ```
     conda install -c conda-forge git-lfs
     git lfs install
-    git clone https://github.com/nanoporetech/ont_tutorial_cas9.git ont_tutorial_cas9
+    git clone https://github.com/nanoporetech/ont_tutorial_sv.git ont_tutorial_sv
 ```
-3. Change your working directory into the new `ont_tutorial_cas9` folder 
+3. Change your working directory into the new `ont_tutorial_sv` folder 
 ```
-    cd ont_tutorial_cas9
+    cd ont_tutorial_sv
 ```
 4. Install Conda software dependencies
 ```
-    conda env create --name ont_tutorial_cas9 --file environment.yaml
+    conda env create --name ont_tutorial_sv --file environment.yaml
 ```
 5. Initialise the Conda environment 
 ```
-    source activate ont_tutorial_cas9
+    source activate ont_tutorial_sv
     R CMD javareconf > /dev/null 2>&1
 ```
 
@@ -75,26 +68,16 @@ Editing the workflow's configuration file, **`config.yaml`**, will allow the ana
 
 # Introduction
 
-Targeted sequencing strategies provide a cost-effective way of sequencing regions of interest to high coverage. Unlike other enrichment methods nanopore sequencing does not require amplification of any sort which allows us to target:
-
-* Long gene targets that are not amenable to long-range PCR (>30 kb) either in a single pass or using up to 100 target sites in a single assay (known as a tiling approach)
-* Regions with methylation patterns or modifications (that can be recovered using software such as TOMBO)
-* Regions that are highly repetitive
-
-[Oxford Nanopore Technologies](https://nanoporetech.com) provides a [Cas-mediated PCR-free enrichment protocol](https://community.nanoporetech.com/protocols/Cas-mediated-PCR-free-enrich/) which uses an enrichment strategy based on the design of CRISPR RNA (crRNA) probe sequences that may flank or tile-across one or more target regions. The crRNAs program the Cas9 protein to bind and cleave DNA at sites that match the crRNA sequence. This Cas9-mediated cut of the DNA, and the production of a newly-exposed and “deprotected” DNA end is the basis of the enrichment protocol.
-
-For an equivalent amount of sequenced library a Cas-mediated DNA enrichment will provide a higher coverage for the targeted regions than sequencing the whole genome alone.
-
-The *Cas-mediated PCR-free enrichment protocol* recommends a strategy for the design of CRISPR RNA (crRNA) probes and provides recommendations for the quality of the purified DNA. These recommendations aim to maximise the on-target sequence recovery by reducing both the DNA background and amounts of off-target DNA. When performing optimally the protocol will delivers up to a couple of Gb of data from a MinION flow cell from 48 hours of sequencing and provide 100s-1000x coverage across target regions. This tutorial has been prepared to help assess performance of a Cas-mediated enrichment study and to help identify target regions and DNA preparation steps that may require further optimisation.
+Structural variation is a key variety of genetic variation. Structural variation has traditionally been challenging to analyse but Nanopore long sequence reads provide new opportunities for the discovery and characterisation of structural variation.
 
 
 There are five goals for this tutorial:
 
-* To introduce a literate framework for analysing Oxford Nanopore *Cas-mediated PCR-free enriched DNA sequence* data
+* To introduce a literate framework for analysing structural variation from Oxford Nanopore DNA sequence data
 * To utilise best data-management practices
-* To map sequence reads to the reference genome
-* To identify and report the sequence reads that map to the defined target regions and off-target regions
-* To describe the relative depletion of the background genome
+* To map sequence reads to the reference genome and to discover structural varations using optimised SV discovery workflow
+* To annotate insertion and deletion events for associated gene and repeat element content
+* To benchmark the performance of SV discovery through assessment of accuracy and precision
 
 
 # Getting started and best practices
@@ -114,9 +97,9 @@ As a best practice this tutorial will separate primary DNA sequence data (the ba
 
 # Experimental setup
 
-The first required step for performing a meta-analysis of a *Cas-mediated PCR-free enrichment protocol* based sequencing study is to define the experimental design. 
+The first required step for running a structural variation discovery workflow is to define the experimental design. 
 
-The example data included with this tutorial describes a Cas-mediated enrichment experiment that targets the HTT gene. The enriched sequence library has been sequenced using a single MinION flowcell on a GridION sequencing device. To manage the sizes of the datasets downloaded, the example dataset provided has been filtered to select for only the sequence reads on **`Chromosome 4`**. The example data is therefore a **synthetic dataset** - but no other enrichment or modification of the sequences has been performed.  
+INSERT SOME TEXT ON WHAT CAN BE TUNED, REQUIRED FILE INPUTS AND RECOMMENDATIONS FOR DEPTH OF COVERAGE
 
 The design for the tutorial is defined within a YAML format configuration file (**`config.yaml`**). The tutorial's file is shown in the figure below.
 
@@ -127,20 +110,17 @@ The design for the tutorial is defined within a YAML format configuration file (
 
 
 * **`pipeline`** identifies the workflow that this configuration file belongs to
-* **`study_name`** is a label used to identify the analysis and the label is used to name the files produced during the analysis
-* **`reference_genome`** refers to the genome against which the sequence reads will be mapped. In this tutorial a URL is provided and the **`Snakemake`** workflow will download the corresponding file.
-* **`target_regions`** points to a BED format file that describes the genomic coordinates for each of the targets being assessed. The BED file format is a tab-delimited file with un-named columns describing, in order, the chromosome, start position, end position and target name.
-* **`fastq`** is a pointer to either a single fastq file (may be gzipped) or a folder of fastq files. These are the sequences that will be mapped to the **`reference_genome`** and assessed for mapping to the targets defined in **`target_regions`**
-* **`gstride`**, **`target_proximity`** and **`offtarget_level`** are parameters used to control the analysis. For offtarget and background assessment, the genome is split into windows **`gstride`** nucleotides in length and mean coverage is assessed. Regions with a mean-coverage of > **`offtarget_level X`** the mean background level are defined as being off-target enrichment regions. **`target_proximity`** defines the window up- and down-stream of the **`target_regions`** that are excluded from the background calculations. This reduces overall mean background by excluding ontarget reads that extend beyond the target-region.
+
+SOME TEXT AND DESCRIPTION FOR WHAT THE INDIVIDUAL PARAMETERS ACTUALLY DO
 
 
 \newpage
 
 # Snakemake
 
-This tutorial for the assessment of target enrichment from DNA sequence data makes use of **`snakemake`** (@snakemake2012). Snakemake is a workflow management system implemented in Python. The aim of the Snakemake tool is to enable reproducible and scalable data analyses. The workflow produced within this document should be portable between laptop resources, computer servers and other larger scale IT deployments. The Snakemake workflow additionally defines the sets of required software (and software versions where appropriate) and will automate the installation and deployment of this software through the **conda** package management system.
+This SV discovery tutorial uses **`snakemake`** (@snakemake2012). Snakemake is a workflow management system implemented in Python. The aim of the Snakemake tool is to enable reproducible and scalable data analyses. The workflow produced within this document should be portable between laptop resources, computer servers and other larger scale IT deployments. The Snakemake workflow additionally defines the sets of required software (and software versions where appropriate) and will automate the installation and deployment of this software through the **conda** package management system.
 
-The **`snakemake`** workflow will call methods that include **`minimap2`** @minimap22018 and **`samtools`** @samtools2009. The planned workflow is shown in the figure below. 
+The **`snakemake`** workflow will call methods that include **`minimap2`** @minimap22018, **`samtools`** @samtools2009 and **`Sniffles`** @sniffles2018. The defined workflow is summarised in the figure below. 
 
 
 ![](Static/Images/dag.png) 
@@ -151,8 +131,10 @@ The precise commands within the **`Snakefile`** include
 * use **`minimap2`** to index the reference genome
 * map DNA sequence reads against the reference genome index using **`minimap2`**
 * convert **`minimap2`** output (**`SAM`**) into a sorted **`BAM`** format using **`samtools`** and filter out the unmapped reads
-* prepare summary mapping statistics using **`Rsamtools`** and **`GenomicAlignments`** from the provided **`R`** script
-* filter for the on-target sequence reads using **`seqtk`** (@seqtkurl)
+
+
+WHAT OTHER STEPS ARE INCLUDED IN THE SNAKEFILE AND SHOULD BE INCLUDED HERE
+
 
 # Run the snakemake workflow file
 

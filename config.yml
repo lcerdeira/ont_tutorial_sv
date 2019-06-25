@@ -1,0 +1,35 @@
+---
+# FASTQ file or folder containing FASTQ files
+input_fastq: "RawData/GM24385.q7.all.15x.fastq"
+# FASTA file containing the reference genome
+reference_fasta: "ReferenceData/human_g1k_v37.fasta"
+# Minimum SV length
+min_sv_length: 100
+# Maximum SV length
+max_sv_length: 1000000
+# Min read length. Shorter reads will be discarded
+min_read_length: 1000
+# Min mapping quality. Reads will lower mapping quality will be discarded
+min_read_mapping_quality: 20
+# Minimum read support required to call a SV (auto for auto-detect)
+min_read_support: 'auto'
+# Sample name
+sample_name: "GM24385.15"
+
+# (optional) BED file containing targeted regions. SVs will only be called in
+# regions contained in the BED file
+# target: "data/test_reference/test_target.bed"
+
+
+#################################
+## General pipeline parameters ##
+#################################
+# path to directory holding the working directory:
+workdir_top: "Analysis"
+# Repository URL:
+repo: "https://github.com/nanoporetech/pipeline-structural-variation.git"
+
+##################################
+## Tutorial specific parameters ##
+##################################
+tutorialText: True
