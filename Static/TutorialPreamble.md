@@ -141,11 +141,14 @@ WHAT OTHER STEPS ARE INCLUDED IN THE SNAKEFILE AND SHOULD BE INCLUDED HERE
 
 \fontsize{8}{12}
 ```
-# just type snakemake to run the workflow
-# Methods run inside the workflow can utilise multiple compute cores for parallel performance
-# Use the -j flag to specify the number of cores to use; the example below requests 4 cores
+# snakemake is used to run the workflow
+# --snakefile parameter is used to locate the Snakefile workflow
+# --configfile is used to override the Snakefile default parameter file
+# --jobs specifies the number of threads to use for the workflow (e.g. use 4 if you have 4 core PC)
+# --stats collects information on the snakemake run that will be included later on in this report
+# `call` is a snakemake target that specifies the sniffles workflow
 
-snakemake -j 4 all
+snakemake --snakefile ./pipeline-structural-variation/Snakefile --configfile ./config.yaml --jobs 8 --stats snakemake.stats call
 ```
 \fontsize{10}{14}
 
