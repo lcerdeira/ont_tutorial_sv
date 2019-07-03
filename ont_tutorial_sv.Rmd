@@ -22,7 +22,7 @@ always_allow_html: yes
 
 <div style="position:absolute;top:0px;right:0px;padding:15px;background-color:gray;width:45%;">
 ```{r, echo=FALSE}
-knitr::include_graphics("https://nanoporetech.com/themes/custom/nanopore/images/ont-logo.svg?tutorial=cas9enrichment")
+knitr::include_graphics("https://nanoporetech.com/themes/custom/nanopore/images/ont-logo.svg?tutorial=sv")
 ```
 </div>
 
@@ -54,10 +54,13 @@ config <- yaml.load_file("config.yaml")
 #tutorialText   <- config$tutorialText
 tutorialText <- FALSE
 
+sample_name <- config$sample_name
 input_fastq <- file.path(basename(dirname(config$input_fastq)), basename(config$input_fastq))
 reference_fasta <- file.path(basename(dirname(config$reference_fasta)), basename(config$reference_fasta))
-sample_name <- config$sample_name
-setRpath(file.path("Analysis", "R"))
+biocGenome <- "hg19"
+
+
+
 
 ### here lie dragons ###
 # expeditions below this comment at your own risk
@@ -70,8 +73,10 @@ slurpContent <- function(filename) {
   }
 }
 
+setRpath(file.path("Analysis", "R"))
 setReferenceGenome(reference_fasta)
 bamFile <- file.path("Analysis", sample_name, "alignment", paste0(sample_name, "_minimap2.bam"))
+vcfFile <- file.path("Analysis", sample_name, "sv_calls", paste0(sample_name, "_sniffles_filtered.vcf.gz"))
 ```
 
 
@@ -118,6 +123,20 @@ infographicFile <- infoGraphicPlot4(identifier="mappingSummary",
                  panelD=c(key="Average Identity", value=paste0(round(mean(primaryBAM$identity)*100,digits=1),"%"), icon="fa-info"))
 
  knitr::include_graphics(infographicFile)
+```
+
+## Assessment of mapping quality and identity
+
+The graphic above has summarised the dimensions of the mapped data. 
+
+```{r mappingIdentity, echo=FALSE}
+
+p1 <- plotAlignmentAccuracy(bamFile, lower=0.75) 
+
+p2 <- plotAlignmentIdentity(bamFile, lower=0.75)
+
+LeftRightPlot(p1, p2)
+
 ```
 
 
@@ -239,6 +258,13 @@ kable(mapping, format="html", col.names=rep(" ", ncol(mapping)), caption="Table 
 ```
 
   
+```{r mappingAccuracy, echo=FALSE}
+
+plotOverallCovHistogram(bamFile) 
+
+```
+  
+  
   
 ```{r chromosomeByChromosome, echo=FALSE}
 
@@ -252,41 +278,21 @@ kable(chrMapping, format="html", caption="Table summarising mapping characterist
 
 ```
   
-```{r mappingIdentity, echo=FALSE}
-
-p1 <- plotAlignmentAccuracy(bamFile, lower=0.8) 
-
-p2 <- plotAlignmentIdentity(bamFile, lower=0.8)
-
-LeftRightPlot(p1, p2)
-
-```
-
-
-```{r mappingAccuracy, echo=FALSE}
 
 
 
-plotOverallCovHistogram(bamFile) 
 
-
-
-```
   
   
   
 
 
 ```{r bamSum, warning=FALSE, echo=FALSE}
-
-Testcigar <- "2737S9M1D15M1D7M1D6M4I11M1D17M1D5M1I6M1D7M3I12M4I15M1D11M1D5M1D11M2D5M1D5M1D5M1D5M1D17M4I3M1D11M1D7M1D11M1D7M3I5M1D11M2D3M1D8M1D15M2I44M1D5M1D6M1D7M3I9M2D4M1D5M1D5M1D19M3I7M3I11M1D9M3D5M1D13M3I5M1D22M123379S"
-
 coverageData <- bamSummaryToCoverage(bamFile, tilewidth=250000)
 # filter out the non-canonical chromosomes ...
 coverageData <- coverageData[-grep("(MT)|(\\.)", as.character(seqnames(coverageData))),]
 
 plotDepthOfCoverageMegablock(coverageData)
-
 ```
   
   
@@ -295,12 +301,56 @@ plotDepthOfCoverageMegablock(coverageData)
 
 
 
+parsing the VCF makes more sense than relying on existing parsers; large deletions are not properly defined within the ALT/REF fields and need to be parsed from variant INFO field
+
+
+```{r vcfSummary, echo=FALSE, warning=FALSE, message=FALSE}
+
+nul <- capture.output(ins <- Vcf2FilteredGranges(vcfFile, svtype="INS"))
+nul <- capture.output(del <- Vcf2FilteredGranges(vcfFile, svtype="DEL"))
+nul <- capture.output(dup <- Vcf2FilteredGranges(vcfFile, svtype="DUP"))
+
+SVsummary <- NULL
+SVsummary <- rbind(SVsummary, c("Insertion", 
+                                scales::comma_format()(length(ins)), 
+                                round(mean(ins$SVLEN), digits=2), 
+                                min(ins$SVLEN), 
+                                scales::comma_format()(max(ins$SVLEN))))
+SVsummary <- rbind(SVsummary, c("Deletion", 
+                                scales::comma_format()(length(del)), 
+                                round(mean(del$SVLEN), digits=2), 
+                                min(del$SVLEN), 
+                                scales::comma_format()(max(del$SVLEN))))
+SVsummary <- rbind(SVsummary, c("Duplication", 
+                                scales::comma_format()(length(ins)), 
+                                round(mean(dup$SVLEN), digits=2), 
+                                min(dup$SVLEN), 
+                                scales::comma_format()(max(dup$SVLEN))))
+
+kable(SVsummary, format="html", col.names=c("SV type", "Count", "Mean size (nt)", "Shortest (nt)", "Longest (nt)"), caption="Table summarising types of structural variations called", booktabs=TRUE, table.envir='table*', linesep="", escape = FALSE) %>% kable_styling(c("striped", "condensed"))
+
+```
+
+
+```{r svLengthDistribution}
+nul <- capture.output(svdist <- svLengthDistribution(vcfFile))
+print(svdist)
+```
+
+
+
+```{r karyogram}
+
+nul <- capture.output(karyogram <- snifflesKaryogram(vcfFile))
+print(karyogram)
+
+```
 
 
 
 
 ```{r loadVcf, eval=FALSE}
-vcf <- readVcf(file.path("results", "GM24385", "sv_calls", "GM24385_sniffles.vcf"), "hg19")
+vcf <- readVcf(file=vcfFile, genome=biocGenome)
 vcf <- trim(vcf)
 
 txdb <- TxDb.Hsapiens.UCSC.hg19.knownGene
