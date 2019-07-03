@@ -42,20 +42,17 @@ options(knitr.kable.NA = '')
 library(yaml)
 library(session)
 library(kableExtra)
-library(ggplot2)
-library(RColorBrewer)
 library(scales) # required for comma
-library(reshape2)
 library(dplyr)
 library(nanopoRe) # devtools::install_github("sagrudd/nanopoRe") # unloadNamespace("nanopoRe")
-library(gdata)
-
+library(emojifont)
 library(vcfR)
 library(VariantAnnotation)
 library(TxDb.Hsapiens.UCSC.hg19.knownGene)
 
 config <- yaml.load_file("config.yaml")
-tutorialText   <- config$tutorialText
+#tutorialText   <- config$tutorialText
+tutorialText <- FALSE
 
 input_fastq <- file.path(basename(dirname(config$input_fastq)), basename(config$input_fastq))
 reference_fasta <- file.path(basename(dirname(config$reference_fasta)), basename(config$reference_fasta))
@@ -73,9 +70,8 @@ slurpContent <- function(filename) {
   }
 }
 
-reportDPI <- 90
-colMax <- 4
-
+setReferenceGenome(reference_fasta)
+bamFile <- file.path("Analysis", sample_name, "alignment", paste0(sample_name, "_minimap2.bam"))
 ```
 
 
@@ -88,62 +84,65 @@ colMax <- 4
 
 The **`ont_tutorial_sv`** script has been used to generate this report. The configuration file, **`config.yaml`** has been parsed and the fastq format DNA sequence file has been identified as **` `r input_fastq` `**.
 
-```{r fastqSummary, cache=TRUE, echo=FALSE}
+```{r fastqSummary, cache=FALSE, echo=FALSE}
 if (!file.exists(input_fastq)) {
   cat(paste0("Fatal error - file ["+input_fastq+"] not found\n\n"))
   knitr::knit_exit()
 }
-if (!fastqValidator(input_fastq)) {
-  cat(paste0("Fatal error - file ["+input_fastq+"] corrupt or not FASTQ format\n\n"))
-  knitr::knit_exit()
+validationResponse = fastqCheckup(input_fastq)
+if (is.logical(validationResponse)) {
+  if (validationResponse==FALSE) {
+    cat(paste0("Fatal error - file ["+input_fastq+"] corrupt or not FASTQ format\n\n"))
+    knitr::knit_exit()
+  }
 }
 
-bases <- gdata::humanReadable(getFastqBases(), standard="SI")
-bases <- gsub("GB", "Gbases", bases)
-bases <- gsub("MB", "Mbases", bases)
-bases <- gsub("kB", "kbases", bases)
-
-file.data <- t(as.data.frame(c(filename=basename(input_fastq), checksum=nanopoRe::md5sum(input_fastq), reads=scales::comma_format()(getFastqCount()), bases=bases, size=gdata::humanReadable(file.info(input_fastq)$size))))
+file.data <- t(data.frame(validationResponse[1:5]))
 
 kable(file.data, format="html", caption="Table summarising provided FASTQ file content", booktabs=TRUE, table.envir='table*', linesep="", escape = FALSE, row.names=FALSE)  %>%
   kable_styling(c("striped", "condensed")) %>%
   footnote(symbol=c("Md5 checksum calculated using R digest package"), symbol_title="please note: ", footnote_as_chunk = TRUE)
 ```
 
+
+# Mapping Summary
+
+```{r mappingExecutiveSummary, echo=FALSE}
+bamSummary <- bamSummarise(bamFile)
+primaryBAM <- bamSummary[which(bamSummary$readFlag=="Primary"),]
+
+infographicFile <- infoGraphicPlot4(identifier="mappingSummary", 
+                 panelA=c(key="Primary Alignments", value=scales::comma_format()(nrow(primaryBAM)), icon="fa-sliders"), 
+                 panelB=c(key="Mapping Yield", value=gdata::humanReadable(sum(primaryBAM$end - primaryBAM$start), standard="SI"), icon="fa-calculator"), 
+                 panelC=c(key="Average Accuracy", value=paste0(round(mean(primaryBAM$accuracy)*100,digits=1),"%"), icon="fa-area-chart"), 
+                 panelD=c(key="Average Identity", value=paste0(round(mean(primaryBAM$identity)*100,digits=1),"%"), icon="fa-info"))
+
+ knitr::include_graphics(infographicFile)
+```
+
+
 # Mapping characteristics
 
-```{r loadMapData, echo=FALSE, results="hide"}
+```{r loadMapData, echo=FALSE, warning=FALSE, message=FALSE}
 
-bamFile <- file.path("Analysis", sample_name, "alignment", paste0(sample_name, "_minimap2.bam"))
+
+
 if (!file.exists(bamFile)) {
   cat(paste0("Fatal error - file ["+bamFile+"] not found\n\n"))
   knitr::knit_exit()
 }
-setReferenceGenome(reference_fasta)
-# junk the non-canonical chromosome ids
-chrIds <- getChromosomeIds()
 
-# this is deprecated with new version of the nanopoRe package
-# cleanReferenceGenome(chrIds[grep("(MT)|(\\.)", chrIds)])
-
-
-
-```
-
-
-
-```{r mappingCharacteristics}
 # load the mapping data
 bamSummary <- bamSummarise(bamFile, blockSize=10000)
 
 primaryBAM <- bamSummary[which(bamSummary$readFlag=="Primary"),]
 unmappedBAM <- bamSummary[which(bamSummary$readFlag=="Unmapped"),]
 
-totalSeqs <- getFastqCount()
+totalSeqs <- as.numeric(validationResponse[7])
 primaryMaps <- nrow(primaryBAM)
 unmapped <- nrow(unmappedBAM)
 
-totalNucleotides <- getFastqBases()
+totalNucleotides <- as.numeric(validationResponse[6])
 mappedReadNt <- sum(primaryBAM$qwidth)
 clippedReadNt <- sum(primaryBAM$coverage * primaryBAM$qwidth)  # clipped_width ...
 unmappedNt <- sum(unmappedBAM$qwidth)
@@ -241,7 +240,7 @@ kable(mapping, format="html", col.names=rep(" ", ncol(mapping)), caption="Table 
 
   
   
-```{r chromosomeByChromosome}
+```{r chromosomeByChromosome, echo=FALSE}
 
 chrIds <- getChromosomeIds()
 chrIds <- chrIds[grep("(MT)|(\\.)", chrIds, invert=TRUE)]
@@ -253,14 +252,24 @@ kable(chrMapping, format="html", caption="Table summarising mapping characterist
 
 ```
   
-  
-  
-  
-```{r coverageHistogram}
+```{r mappingIdentity, echo=FALSE}
+
+p1 <- plotAlignmentAccuracy(bamFile, lower=0.8) 
+
+p2 <- plotAlignmentIdentity(bamFile, lower=0.8)
+
+LeftRightPlot(p1, p2)
+
+```
+
+
+```{r mappingAccuracy, echo=FALSE}
 
 
 
 plotOverallCovHistogram(bamFile) 
+
+
 
 ```
   
@@ -268,7 +277,7 @@ plotOverallCovHistogram(bamFile)
   
 
 
-```{r bamSum, warning=FALSE}
+```{r bamSum, warning=FALSE, echo=FALSE}
 
 Testcigar <- "2737S9M1D15M1D7M1D6M4I11M1D17M1D5M1I6M1D7M3I12M4I15M1D11M1D5M1D11M2D5M1D5M1D5M1D5M1D17M4I3M1D11M1D7M1D11M1D7M3I5M1D11M2D3M1D8M1D15M2I44M1D5M1D6M1D7M3I9M2D4M1D5M1D5M1D19M3I7M3I11M1D9M3D5M1D13M3I5M1D22M123379S"
 
@@ -276,7 +285,7 @@ coverageData <- bamSummaryToCoverage(bamFile, tilewidth=250000)
 # filter out the non-canonical chromosomes ...
 coverageData <- coverageData[-grep("(MT)|(\\.)", as.character(seqnames(coverageData))),]
 
-plotDepthOfCoverageMegablock(coverageData, colMax=colMax)
+plotDepthOfCoverageMegablock(coverageData)
 
 ```
   
@@ -320,7 +329,7 @@ It is also worth recording the versions of the software that have been used for 
 \fontsize{8}{12}
 
 ```{r, engine='bash', echo=FALSE, comment=NA}
-conda list "samtools|minimap2|snakemake|rstudio"
+conda list "samtools|minimap2|sniffles|snakemake|rstudio"
 ```
 
 \fontsize{10}{14}

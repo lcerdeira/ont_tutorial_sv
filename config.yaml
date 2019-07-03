@@ -4,7 +4,7 @@
 # current working directory - rather than in the ´pipeline-structural-variation´ directory
 
 # FASTQ file or folder containing FASTQ files
-input_fastq: "../RawData/subseq.fastq"
+input_fastq: "../RawData/GM24385.q7.all.15x.fastq"
 # FASTA file containing the reference genome
 reference_fasta: "../ReferenceData/human_g1k_v37.fasta"
 # Minimum SV length
@@ -18,7 +18,7 @@ min_read_mapping_quality: 20
 # Minimum read support required to call a SV (auto for auto-detect)
 min_read_support: 'auto'
 # Sample name
-sample_name: "subseq"
+sample_name: "GM24385.15"
 
 # (optional) BED file containing targeted regions. SVs will only be called in
 # regions contained in the BED file
