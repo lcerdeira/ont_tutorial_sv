@@ -52,7 +52,7 @@ library(TxDb.Hsapiens.UCSC.hg19.knownGene)
 
 config <- yaml.load_file("config.yaml")
 #tutorialText   <- config$tutorialText
-tutorialText <- FALSE
+tutorialText <- TRUE
 
 sample_name <- config$sample_name
 input_fastq <- file.path(basename(dirname(config$input_fastq)), basename(config$input_fastq))
@@ -112,7 +112,7 @@ kable(file.data, format="html", caption="Table summarising provided FASTQ file c
 
 # Mapping Summary
 
-```{r mappingExecutiveSummary, echo=FALSE}
+```{r mappingExecutiveSummary, echo=FALSE, message=FALSE}
 bamSummary <- bamSummarise(bamFile)
 primaryBAM <- bamSummary[which(bamSummary$readFlag=="Primary"),]
 
@@ -129,7 +129,7 @@ infographicFile <- infoGraphicPlot4(identifier="mappingSummary",
 
 The graphic above has summarised the dimensions of the mapped data. 
 
-```{r mappingIdentity, echo=FALSE}
+```{r mappingIdentity, echo=FALSE, message=FALSE}
 
 p1 <- plotAlignmentAccuracy(bamFile, lower=0.75) 
 
@@ -144,8 +144,6 @@ LeftRightPlot(p1, p2)
 
 ```{r loadMapData, echo=FALSE, warning=FALSE, message=FALSE}
 
-
-
 if (!file.exists(bamFile)) {
   cat(paste0("Fatal error - file ["+bamFile+"] not found\n\n"))
   knitr::knit_exit()
@@ -154,119 +152,20 @@ if (!file.exists(bamFile)) {
 # load the mapping data
 bamSummary <- bamSummarise(bamFile, blockSize=10000)
 
-primaryBAM <- bamSummary[which(bamSummary$readFlag=="Primary"),]
-unmappedBAM <- bamSummary[which(bamSummary$readFlag=="Unmapped"),]
-
-totalSeqs <- as.numeric(validationResponse[7])
-primaryMaps <- nrow(primaryBAM)
-unmapped <- nrow(unmappedBAM)
-
-totalNucleotides <- as.numeric(validationResponse[6])
-mappedReadNt <- sum(primaryBAM$qwidth)
-clippedReadNt <- sum(primaryBAM$coverage * primaryBAM$qwidth)  # clipped_width ...
-unmappedNt <- sum(unmappedBAM$qwidth)
-
-mapping <- data.frame(key=character(0), value=character(0), percentage=character(0))
-
-# statistics on number of reads
-mapping <- mapping %>% add_row(key="fastq reads", value=scales::comma_format()(totalSeqs), percentage="")
-
-mapping <- mapping %>% add_row(key="mapped reads (primary)", 
-                               value=scales::comma_format()(primaryMaps), 
-                               percentage=paste0(round(primaryMaps / totalSeqs * 100, digits=2),"%"))
-mapping <- mapping %>% add_row(key="mapped reads (secondary)", 
-                               value=scales::comma_format()(length(which(bamSummary$readFlag=="Secondary"))), 
-                               percentage="")
-mapping <- mapping %>% add_row(key="mapped reads (supplementary)", 
-                               value=scales::comma_format()(length(which(bamSummary$readFlag=="Supplementary"))), 
-                               percentage="")
-mapping <- mapping %>% add_row(key="unmapped reads", 
-                               value=scales::comma_format()(unmapped), 
-                               percentage=paste0(round(unmapped / totalSeqs * 100, digits=2),"%"))
-
-mapping <- mapping %>% add_row(key="fastq nucleotides", value=scales::comma_format()(totalNucleotides), percentage="")
-
-mapping <- mapping %>% add_row(key="nucleotides from primary mapped reads", 
-                               value=scales::comma_format()(mappedReadNt), 
-                               percentage=paste0(round(mappedReadNt / totalNucleotides * 100, digits=2),"%"))
-mapping <- mapping %>% add_row(key="clipped nucleotides from primary mappings", 
-                               value=scales::comma_format()(clippedReadNt), 
-                               percentage=paste0(round(clippedReadNt / totalNucleotides * 100, digits=2),"%"))
-mapping <- mapping %>% add_row(key="unmapped nucleotides", 
-                               value=scales::comma_format()(unmappedNt), 
-                               percentage=paste0(round(unmappedNt / totalNucleotides * 100, digits=2),"%"))
-mapping <- mapping %>% add_row(key="nucleotides mapped (secondary mappings)", 
-                               value=scales::comma_format()(sum(bamSummary[which(bamSummary$readFlag=="Secondary"),]$qwidth * bamSummary[which(bamSummary$readFlag=="Secondary"),]$coverage)), 
-                               percentage="")
-mapping <- mapping %>% add_row(key="nucleotides mapped (supplementary mappings)", 
-                               value=scales::comma_format()(sum(bamSummary[which(bamSummary$readFlag=="Supplementary"),]$qwidth * bamSummary[which(bamSummary$readFlag=="Supplementary"),]$coverage)), 
-                               percentage="")
-
-mapping <- mapping %>% add_row(key="mean read length (primary mapping)", 
-                               value=scales::comma_format()(mean(bamSummary[which(bamSummary$readFlag=="Primary"),]$qwidth)), percentage="")
-mapping <- mapping %>% add_row(key="mean read length (secondary mapping)", 
-                               value=scales::comma_format()(mean(bamSummary[which(bamSummary$readFlag=="Secondary"),]$qwidth)), percentage="")
-mapping <- mapping %>% add_row(key="mean read length (supplementary mapping)", 
-                               value=scales::comma_format()(mean(bamSummary[which(bamSummary$readFlag=="Supplementary"),]$qwidth)), percentage="")
-mapping <- mapping %>% add_row(key="mean read length (unmapped)", 
-                               value=scales::comma_format()(mean(bamSummary[which(bamSummary$readFlag=="Unmapped"),]$qwidth)), percentage="")
-
-
-mapping <- mapping %>% add_row(key="mean read quality (primary mapping)", 
-                               value=paste0(round(phredmean(bamSummary[which(bamSummary$readFlag=="Primary"),]$readq), digits=2)), percentage="")
-mapping <- mapping %>% add_row(key="mean read quality (secondary mapping)", 
-                               value=paste0(round(phredmean(bamSummary[which(bamSummary$readFlag=="Secondary"),]$readq), digits=2)), percentage="")
-mapping <- mapping %>% add_row(key="mean read quality (supplementary mapping)", 
-                               value=paste0(round(phredmean(bamSummary[which(bamSummary$readFlag=="Supplementary"),]$readq), digits=2)), percentage="")
-mapping <- mapping %>% add_row(key="mean read quality (unmapped)", 
-                               value=paste0(round(phredmean(bamSummary[which(bamSummary$readFlag=="Unmapped"),]$readq), digits=2)), percentage="")
-
-
-mapping <- mapping %>% add_row(key="mean mapping quality (primary mapping)", 
-                               value=paste0(round(mean(bamSummary[which(bamSummary$readFlag=="Primary"),]$mapq), digits=2)), percentage="")
-mapping <- mapping %>% add_row(key="mean mapping quality (secondary mapping)", 
-                               value=paste0(round(mean(bamSummary[which(bamSummary$readFlag=="Secondary"),]$mapq), digits=2)), percentage="")
-mapping <- mapping %>% add_row(key="mean mapping quality (supplementary)", 
-                               value=paste0(round(mean(bamSummary[which(bamSummary$readFlag=="Supplementary"),]$mapq), digits=2)), percentage="")
-
-
-mapping <- mapping %>% add_row(key="mean coverage (primary mapping)", 
-                               value=paste0(round(mean(bamSummaryToCoverage(bamFile, flag="Primary")$binned_cov), digits=2)), 
-                               percentage="")
-mapping <- mapping %>% add_row(key="mean coverage (secondary mapping)", 
-                               value=paste0(round(mean(bamSummaryToCoverage(bamFile, flag="Secondary")$binned_cov), digits=2)), 
-                               percentage="")
-mapping <- mapping %>% add_row(key="mean coverage (supplementary)", 
-                               value=paste0(round(mean(bamSummaryToCoverage(bamFile, flag="Supplementary")$binned_cov), digits=2)), 
-                               percentage="")
-
-  rownames(mapping) <- mapping[,1]
-  mapping <- mapping[,-1]
-
-row.names(mapping)[7]<- paste0(row.names(mapping)[7], footnote_marker_symbol(1, "html"))
-row.names(mapping)[8]<- paste0(row.names(mapping)[8], footnote_marker_symbol(2, "html"))
-
-kable(mapping, format="html", col.names=rep(" ", ncol(mapping)), caption="Table summarising mapping characteristics", booktabs=TRUE, table.envir='table*', linesep="", escape = FALSE) %>%
-  kable_styling(c("striped", "condensed"))  %>%
-  pack_rows("Sequence Read Mapping", 1, 5) %>%
-  pack_rows("Nucleotides Mapped", 6, 11) %>%
-  pack_rows("Reads lengths", 12, 15) %>%
-  pack_rows("Reads Qualities", 16, 19) %>%
-  pack_rows("Mapping Qualities", 20, 22) %>%
-  pack_rows("Depth of Coverage", 23, 25) %>%
-  footnote(symbol=c("fastq bases are calculated from the qwidth field of the primary mapped sequences", "soft-clipped nucleotide bases are calculated from the BAM CIGAR annotation"), symbol_title="please note: ", footnote_as_chunk = TRUE)
+SVMappingCharacteristicTable(bamSummary)
 ```
 
   
-```{r mappingAccuracy, echo=FALSE}
+```{r mappingAccuracy, echo=FALSE, warning=FALSE, message=FALSE}
 
-plotOverallCovHistogram(bamFile) 
+nul <- capture.output(covHist <- plotOverallCovHistogram(bamFile))
+print(covHist)
 
 ```
   
   
   
-```{r chromosomeByChromosome, echo=FALSE}
+```{r chromosomeByChromosome, echo=FALSE, message=FALSE}
 
 chrIds <- getChromosomeIds()
 chrIds <- chrIds[grep("(MT)|(\\.)", chrIds, invert=TRUE)]
@@ -287,8 +186,8 @@ kable(chrMapping, format="html", caption="Table summarising mapping characterist
   
 
 
-```{r bamSum, warning=FALSE, echo=FALSE}
-coverageData <- bamSummaryToCoverage(bamFile, tilewidth=250000)
+```{r bamSum, warning=FALSE, echo=FALSE, message=FALSE}
+suppressWarnings(coverageData <- bamSummaryToCoverage(bamFile, tilewidth=250000))
 # filter out the non-canonical chromosomes ...
 coverageData <- coverageData[-grep("(MT)|(\\.)", as.character(seqnames(coverageData))),]
 
@@ -299,9 +198,11 @@ plotDepthOfCoverageMegablock(coverageData)
 
 
 
-
+# Investigation of VCF file produced by Sniffles
 
 parsing the VCF makes more sense than relying on existing parsers; large deletions are not properly defined within the ALT/REF fields and need to be parsed from variant INFO field
+
+## Structural Variants - Executive Summary
 
 
 ```{r vcfSummary, echo=FALSE, warning=FALSE, message=FALSE}
@@ -310,6 +211,15 @@ nul <- capture.output(ins <- Vcf2FilteredGranges(vcfFile, svtype="INS"))
 nul <- capture.output(del <- Vcf2FilteredGranges(vcfFile, svtype="DEL"))
 nul <- capture.output(dup <- Vcf2FilteredGranges(vcfFile, svtype="DUP"))
 
+infographicFile2 <- infoGraphicPlot3(identifier="SV_types", 
+                 panelA=c(key="Insertions",   value=scales::comma_format()(length(ins)), icon="fa-chevron-down"), 
+                 panelB=c(key="Deletions",    value=scales::comma_format()(length(del)), icon="fa-cut"), 
+                 panelC=c(key="Duplications", value=scales::comma_format()(length(dup)), icon="fa-paperclip"))
+
+ knitr::include_graphics(infographicFile2)
+```
+
+```{r SVsummarytable, echo=FALSE}
 SVsummary <- NULL
 SVsummary <- rbind(SVsummary, c("Insertion", 
                                 scales::comma_format()(length(ins)), 
@@ -322,7 +232,7 @@ SVsummary <- rbind(SVsummary, c("Deletion",
                                 min(del$SVLEN), 
                                 scales::comma_format()(max(del$SVLEN))))
 SVsummary <- rbind(SVsummary, c("Duplication", 
-                                scales::comma_format()(length(ins)), 
+                                scales::comma_format()(length(dup)), 
                                 round(mean(dup$SVLEN), digits=2), 
                                 min(dup$SVLEN), 
                                 scales::comma_format()(max(dup$SVLEN))))
@@ -332,14 +242,14 @@ kable(SVsummary, format="html", col.names=c("SV type", "Count", "Mean size (nt)"
 ```
 
 
-```{r svLengthDistribution}
+```{r svLengthDistribution, echo=FALSE}
 nul <- capture.output(svdist <- svLengthDistribution(vcfFile))
 print(svdist)
 ```
 
 
 
-```{r karyogram}
+```{r karyogram, echo=FALSE, warning=FALSE, message=FALSE}
 
 nul <- capture.output(karyogram <- snifflesKaryogram(vcfFile))
 print(karyogram)
@@ -358,8 +268,41 @@ txdb <- TxDb.Hsapiens.UCSC.hg19.knownGene
 seqlevels(vcf) <- paste0("chr",seqlevels(vcf))
 seqlevels(vcf, pruning.mode="coarse") <- seqlevels(vcf)[which(seqlevels(vcf) %in% seqlevels(txdb))]
 
-locateVariants(rowRanges(vcf), txdb, AllVariants())
+suppressWarnings(variants <- locateVariants(rowRanges(vcf), txdb, AllVariants()))
 ```
+
+
+# Structural Variations and Genomic Repeat Analysis
+
+```{r RepeatMasker} 
+
+RepeatGR <- RepeatMaskerGR()
+SV <- Vcf2GRanges(vcfFile)
+seqlengths(SV) <- getSeqLengths(names(seqlengths(SV)))
+
+suppressWarnings(real <- RepeatGR[queryHits(findOverlaps(RepeatGR, SV))]$repeatClass)
+realDF <- as.data.frame(table(real))
+
+
+
+
+shuffleGRanges <- function(i, SV, RepeatGR) {
+  sstarts <- as.numeric(round(runif(length(SV)) * seqlengths(SV)[match(as.character(seqnames(SV)), names(seqlengths(SV)))] - width(SV)))
+  shGR <- GRanges(seqnames=seqnames(SV),
+                  ranges=IRanges(start=sstarts,
+                                 end=sstarts+width(SV)-1))
+  return(RepeatGR[queryHits(findOverlaps(RepeatGR, shGR))]$repeatClass)
+}
+
+
+replicates <- 101
+suppressWarnings(simulated <- lapply(seq(replicates), shuffleGRanges, SV=SV, RepeatGR=RepeatGR))
+simDF <- as.data.frame(table(unlist(simulated)) / replicates)
+
+merge(x=realDF, y=simDF, by=1, all=TRUE)
+
+```
+
 
 
 # Reproducible research - produce your own report

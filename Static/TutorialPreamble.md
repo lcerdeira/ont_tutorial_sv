@@ -122,8 +122,9 @@ This SV discovery tutorial uses **`snakemake`** (@snakemake2012). Snakemake is a
 
 The **`snakemake`** workflow will call methods that include **`minimap2`** @minimap22018, **`samtools`** @samtools2009 and **`Sniffles`** @sniffles2018. The defined workflow is summarised in the figure below. 
 
+<!-- [^Comment]: # (DAG can be produced with the command = snakemake --snakefile ./pipeline-structural-variation/Snakefile --configfile --> ./config.yaml  --forceall --dag call | grep -v target.bed | grep -v Working | dot -Tpng > structural_variation_workflow.png)
 
-![](Static/Images/dag.png) 
+![](Static/Images/structural_variation_workflow.png) 
 
 The precise commands within the **`Snakefile`** include
 
@@ -139,6 +140,8 @@ WHAT OTHER STEPS ARE INCLUDED IN THE SNAKEFILE AND SHOULD BE INCLUDED HERE
 # Run the snakemake workflow file
 
 
+<!-- [^Comment]: # (Include --stats snakemake.stats for logging runtime for the different steps) -->
+
 \fontsize{8}{12}
 ```
 # snakemake is used to run the workflow
@@ -148,7 +151,7 @@ WHAT OTHER STEPS ARE INCLUDED IN THE SNAKEFILE AND SHOULD BE INCLUDED HERE
 # --stats collects information on the snakemake run that will be included later on in this report
 # `call` is a snakemake target that specifies the sniffles workflow
 
-snakemake --snakefile ./pipeline-structural-variation/Snakefile --configfile ./config.yaml --jobs 8 --stats snakemake.stats call
+snakemake --snakefile ./pipeline-structural-variation/Snakefile --configfile ./config.yaml --jobs 8 call
 ```
 \fontsize{10}{14}
 
