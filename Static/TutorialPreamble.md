@@ -1,6 +1,6 @@
 # Statement of tutorial objectives
 
-The aim of this tutorial is to demonstrate a workflow for discovering and characterising genomic structural variations. This is achieved by mapping Nanopore long sequence reads to a reference genome and evaluating discordant mapping coordinates using the **`Sniffles`** software. This tutorial is based on the [Oxford Nanopore pipeline-structural-variation project](https://github.com/nanoporetech/pipeline-structural-variation) available from out Github pages and may be used to identify large insertion and deletion events.
+The aim of this tutorial is to demonstrate a workflow for discovering and characterising genomic structural variations. This is achieved by mapping Nanopore long sequence reads to a reference genome and evaluating discordant mapping coordinates using the **`Sniffles`** software. This tutorial is based on the [Oxford Nanopore pipeline-structural-variation project](https://github.com/nanoporetech/pipeline-structural-variation) available from out Github pages and may be used to identify large insertion, duplication and deletion events.
 
 The tutorial is packaged with example data from the [Genome in a Bottle](https://www.nist.gov/programs-projects/genome-bottle), and the workflow can be reproduced to address questions such as
 
@@ -9,11 +9,12 @@ The tutorial is packaged with example data from the [Genome in a Bottle](https:/
 * How many structural variations can be identified, and what how frequent are the different types
 * What is the precision and recall of structural variants from a reference truthset?
 
-Editing the workflow's configuration file, **`config.yml`**, will allow the analyses to be run using different DNA sequence collections, reference genomes, and with different parameters to tune the structural variation discovery workflow.
+Editing the workflow's configuration file, **`config.yaml`**, will allow the analyses to be run using different DNA sequence collections, alternative reference genomes, and with different parameters to tune the structural variation discovery workflow. This will enable the running of your own samples against a reference genome of your choice.
 
 ## What will this tutorial produce?
 
 * A rich HTML format report containing summary statistics and figures highlighting performance of the enrichment protocol
+* **`VCF`** format file of high-confidence structural variants
 * **`Coordinates`** and instructions for reviewing candidate genomic regions with **`IGV`** the Integrated Genomics Viewer
 
 
@@ -25,13 +26,14 @@ Editing the workflow's configuration file, **`config.yml`**, will allow the anal
 * **`sniffles`** for structural variation calling
 * **`RSamtools`** and **`GenomicAlignments`**; R software for parsing BAM files
 * **`IGV`** for visualising mapping characteristics at specific genomic regions
+* **`Ribbon`** is a web-application for the presentation of structural variation data
 
 ## The computational requirements include: 
 
 * Computer running Linux (Centos7, Ubuntu 18_10, Fedora 29, macOS)
 * Multiple CPU cores are ideal; a 4 core CPU at minimum would be recommended 
 * At least 16 Gb RAM - this is sufficient for mapping against the human genome and can report a full MinION flowcell worth of sequence data. The packaged dataset uses just human chromosome 4 and 8Gb RAM is sufficient
-* At least 15 Gb spare disk space for analysis and indices
+* At least 15 Gb spare disk space for analysis and data files; using a 30X human dataset would require approximately 500 Gb of available storage space.
 * Runtime with provided example data - approximately 45 minutes
 
 \pagebreak
@@ -61,7 +63,6 @@ Editing the workflow's configuration file, **`config.yml`**, will allow the anal
 5. Initialise the Conda environment 
 ```
     source activate ont_tutorial_sv
-    R CMD javareconf > /dev/null 2>&1
 ```
 
 
@@ -69,16 +70,17 @@ Editing the workflow's configuration file, **`config.yml`**, will allow the anal
 
 # Introduction
 
-Structural variation is a key variety of genetic variation. Structural variation has traditionally been challenging to analyse but Nanopore long sequence reads provide new opportunities for the discovery and characterisation of structural variation.
+Structural variation is a type of genetic variation. Structural variation has traditionally been challenging to analyse but Oxford Nanopore long sequence reads provide new opportunities for the discovery and characterisation of structural variation.
 
 
 There are five goals for this tutorial:
 
 * To introduce a literate framework for analysing structural variation from Oxford Nanopore DNA sequence data
 * To utilise best data-management practices
-* To map sequence reads to the reference genome and to discover structural varations using optimised SV discovery workflow
-* To annotate insertion and deletion events for associated gene and repeat element content
-* To benchmark the performance of SV discovery through assessment of accuracy and precision
+* To map sequence reads to the reference genome and to discover structural varations using **`pipeline-structural-variation`**, an SV discovery workflow optimised for Oxford Nanopore DNA sequence data
+* To annotate genomic insertion, deletion and duplications against the human reference genome to identify the variants that overlap genes 
+* To identify the human DNA sequence repeats that overlap with the structural variants 
+* To benchmark the performance of SV discovery through assessment of precision and recall using a structural variation truthset
 
 
 # Getting started and best practices
@@ -87,7 +89,7 @@ This tutorial requires a computer workstation running a Linux operating system. 
 
 The described analytical workflow makes extensive use of the **`conda`** package management and the **`snakemake`** workflow software. These software packages and the functionality of **`Rmarkdown`** provide the source for a rich, reproducible and extensible tutorial document.
 
-The workflow contained within this Tutorial performs an authentic bioinformatics analysis and using the human chromosome 4 as a reference sequence. There are some considerations in terms of memory and processor requirement. Indexing the whole human genome for sequence read mapping using **`minimap2`** will use at least **`18 Gb`** of memory. The minimal recommended hardware setup for this tutorial is a 4 threaded computer with at least 8 Gb of RAM and 10 Gb of storage space. 
+The workflow contained within this Tutorial performs an authentic bioinformatics analysis and uses human chromosome 4 as a reference sequence. There are some considerations in terms of memory and processor requirement. Indexing the whole human genome for sequence read mapping using **`minimap2`** will use at least **`18 Gb`** of memory. The minimal recommended hardware setup for this tutorial is a 4 threaded computer with at least 8 Gb of RAM and 10 Gb of storage space. 
 
 There are few dependencies that need to be installed at the system level prior to running the tutorial. The **`conda`** package management software will coordinate the installation of the required bioinformatics software and their dependencies in user space - this is dependent on a robust internet connection.
 

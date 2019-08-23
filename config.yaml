@@ -1,14 +1,14 @@
 ---
-# this config.yaml is passed to Snakefile in pipeline-structural-variation subfolder
-# paths are prefixed with ´../´ - this tells the Snakefile to use folders in the
-# current working directory - rather than in the ´pipeline-structural-variation´ directory
+# this config.yaml is passed to Snakefile in pipeline-structural-variation subfolder.
+# Snakemake is run from this pipeline-structural-variation folder; it is necessary to
+# pass an appropriate path to the input-files (the ../ prefix is sufficient for this demo)
 
 # FASTQ file or folder containing FASTQ files
 input_fastq: "../RawData/GM24385.q7.all.15x.fastq"
 # FASTA file containing the reference genome
 reference_fasta: "../ReferenceData/human_g1k_v37.fasta"
 # Minimum SV length
-min_sv_length: 100
+min_sv_length: 40
 # Maximum SV length
 max_sv_length: 1000000
 # Min read length. Shorter reads will be discarded
@@ -19,11 +19,6 @@ min_read_mapping_quality: 20
 min_read_support: 'auto'
 # Sample name
 sample_name: "GM24385.15"
-
-# (optional) BED file containing targeted regions. SVs will only be called in
-# regions contained in the BED file
-# target: "data/test_reference/test_target.bed"
-
 
 #################################
 ## General pipeline parameters ##
@@ -37,3 +32,6 @@ repo: "https://github.com/nanoporetech/pipeline-structural-variation.git"
 ## Tutorial specific parameters ##
 ##################################
 tutorialText: True
+biocGenome: "hg19"
+GeneIdMappings: "org.Hs.eg.db"
+GenomeAnnotation: "TxDb.Hsapiens.UCSC.hg19.knownGene"

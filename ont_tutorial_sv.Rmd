@@ -48,9 +48,6 @@ library(nanopoRe) # devtools::install_github("sagrudd/nanopoRe") # unloadNamespa
 library(emojifont)
 library(vcfR)
 library(VariantAnnotation)
-library(TxDb.Hsapiens.UCSC.hg19.knownGene)
-library("org.Hs.eg.db")
-
 
 config <- yaml.load_file("config.yaml")
 #tutorialText   <- config$tutorialText
@@ -59,10 +56,6 @@ tutorialText <- TRUE
 sample_name <- config$sample_name
 input_fastq <- file.path(basename(dirname(config$input_fastq)), basename(config$input_fastq))
 reference_fasta <- file.path(basename(dirname(config$reference_fasta)), basename(config$reference_fasta))
-biocGenome <- "hg19"
-
-
-
 
 ### here lie dragons ###
 # expeditions below this comment at your own risk
@@ -79,6 +72,16 @@ setRpath(file.path("Analysis", "R"))
 setReferenceGenome(reference_fasta)
 bamFile <- file.path("Analysis", sample_name, "alignment", paste0(sample_name, "_minimap2.bam"))
 vcfFile <- file.path("Analysis", sample_name, "sv_calls", paste0(sample_name, "_sniffles_filtered.vcf.gz"))
+
+# load the annotation packages that will be used presently ...
+# this is a little ugly; but is is moving the package definitions into config.yaml; will try to install missing
+# packages - what could possibly go wrong ...
+biocGenome <- config$biocGenome
+if (!config$GeneIdMappings %in% installed.packages()[, "Package"]) {BiocManager::install(config$GeneIdMappings)}
+library(eval(config$GeneIdMappings), character.only=TRUE)
+if (!config$GenomeAnnotation %in% installed.packages()[, "Package"]) {BiocManager::install(config$GenomeAnnotation)}
+library(eval(config$GenomeAnnotation), character.only=TRUE)
+eval(parse(text=paste0("txdb <- ",config$GenomeAnnotation)))
 ```
 
 
@@ -258,21 +261,21 @@ print(karyogram)
 
 ```
 
+# Genomic placement of SVs in annotated genome.
+
+Genes are characterised by patterns of large introns, short exons and various regulatory regions - and are themselves interspersed by typically large intergenic regions. When considering the collections of structural variations identified, it is useful to consider how the structural variations are placed within the genome. 
 
 
-
-```{r loadVcf, echo=FALSE, message=FALSE, warning=FALSE}
+```{r loadVcf, echo=FALSE, message=FALSE, warning=FALSE, results='hide'}
 vcf <- readVcf(file=vcfFile, genome=biocGenome)
 vcf <- trim(vcf)
-
-txdb <- TxDb.Hsapiens.UCSC.hg19.knownGene
 
 seqlevels(vcf) <- paste0("chr",seqlevels(vcf))
 seqlevels(vcf, pruning.mode="coarse") <- seqlevels(vcf)[which(seqlevels(vcf) %in% seqlevels(txdb))]
 
-suppressWarnings(variants <- locateVariants(rowRanges(vcf), txdb, AllVariants()))
+suppressWarnings(variantsGR <- locateVariants(rowRanges(vcf), txdb, AllVariants()))
 # filter on some key columns; remove e.g. the TXID and CDSID that lead to duplicates ...
-variants <- data.frame(variants)[,c("seqnames", "start", "end", "width", "LOCATION", "QUERYID", "GENEID")]
+variants <- data.frame(variantsGR)[,c("seqnames", "start", "end", "width", "LOCATION", "QUERYID", "GENEID")]
 variants <- variants[!duplicated(variants),]
 vcfMeta <- Vcf2GRanges(vcfFile)
 
@@ -280,26 +283,36 @@ genic <- data.frame(variants[which(variants$LOCATION == "coding"),])
 genic$SVTYPE <- as.character(vcfMeta[genic$QUERYID,]$SVTYPE)
 genic$SVLEN <- as.character(vcfMeta[genic$QUERYID,]$SVLEN)
 genic$SYMBOL <- as.character(mapIds(org.Hs.eg.db, keys=genic$GENEID, column="SYMBOL", keytype="ENTREZID"))
-
-
-kable(as.data.frame(table(as.character(variants$LOCATION))), format="html", col.names=c("SV location", "Count"), caption="Table summarising the genomic location of SVs called", booktabs=TRUE, table.envir='table*', linesep="") %>% kable_styling(c("striped", "condensed"))
 ```
 
+```{r genomeComponentTable, echo=FALSE}
+svloctable <- as.data.frame(table(as.character(variants$LOCATION)))
+
+svloctable$genes <- lapply(svloctable$Var1, function(x) { length(which(!is.na(unique(variants[which(variants$LOCATION==x),"GENEID"])))) })
+svloctable$del <- lapply(svloctable$Var1, function(x) { length(which(mcols(vcfMeta[variants[which(variants$LOCATION==x),"QUERYID"],])$SVTYPE=="DEL")) })
+svloctable$ins <- lapply(svloctable$Var1, function(x) { length(which(mcols(vcfMeta[variants[which(variants$LOCATION==x),"QUERYID"],])$SVTYPE=="INS")) })
+svloctable$dup <- lapply(svloctable$Var1, function(x) { length(which(mcols(vcfMeta[variants[which(variants$LOCATION==x),"QUERYID"],])$SVTYPE=="DUP")) })
+
+kable(svloctable, format="html", col.names=c("SV location", "Count", "Genes", "Deletions", "Insertions", "Duplications"), caption="Table summarising the genomic location of SVs called", booktabs=TRUE, table.envir='table*', linesep="") %>% kable_styling(c("striped", "condensed"))
+```
+
+
+The **coding** SVs identified in the table above, overlap with annotated gene exons. A deletion, insertion, or duplication event may have functional implications. 
 
 ```{r codingRegions, echo=FALSE, message=FALSE, warning=FALSE}
 
 genes       <- sort(unique(genic[which(genic$SYMBOL!="NULL"),"SYMBOL"]))
-insertions  <- unlist(lapply(genes, function(x) { length(which(genic[which(genic$SYMBOL==x),"SVTYPE"]=="INS")) }))
 deletions   <- unlist(lapply(genes, function(x) { length(which(genic[which(genic$SYMBOL==x),"SVTYPE"]=="DEL")) }))
+insertions  <- unlist(lapply(genes, function(x) { length(which(genic[which(genic$SYMBOL==x),"SVTYPE"]=="INS")) }))
 duplications<- unlist(lapply(genes, function(x) { length(which(genic[which(genic$SYMBOL==x),"SVTYPE"]=="DUP")) }))
 vsizes      <- unlist(lapply(genes, function(x) { round(mean(as.integer(genic[which(genic$SYMBOL==x),"SVLEN"]))) }))
 chromosome  <- unlist(lapply(genes, function(x) { unique(as.character(genic[which(genic$SYMBOL==x),"seqnames"])) }))
 
-geneAssociation <- cbind(genes, chromosome, insertions, deletions, duplications, vsizes)
+geneAssociation <- cbind(genes, chromosome, deletions, insertions, duplications, vsizes)
 geneAssociation[geneAssociation=="0"] <- " "
 
 
-kable(geneAssociation, format="html", col.names=c("GeneId", "Chromosome", "Insertions", "Deletions", "Duplications", "Mean variant size"), caption="Table listing genes containing SVs, the SV type and SV size", booktabs=TRUE, table.envir='table*', linesep="") %>% kable_styling(c("striped", "condensed"))
+kable(geneAssociation, format="html", col.names=c("GeneId", "Chromosome", "Deletions", "Insertions", "Duplications", "Mean variant size"), caption="Table listing genes containing SVs, the SV type and SV size", booktabs=TRUE, table.envir='table*', linesep="") %>% kable_styling(c("striped", "condensed"))
 ```
 
 
@@ -309,44 +322,31 @@ The table above shows how most structural variants are located in the non-protei
 
 # Structural Variations and Genomic Repeat Analysis
 
-```{r RepeatMasker, echo=FALSE, message=FALSE, warning=FALSE} 
+```{r RepeatMasker, echo=FALSE, message=FALSE, warning=FALSE, results='hide'} 
 
 RepeatGR <- RepeatMaskerGR()
 SV <- Vcf2GRanges(vcfFile)
 seqlengths(SV) <- getSeqLengths(names(seqlengths(SV)))
 
-suppressWarnings(real <- RepeatGR[queryHits(findOverlaps(RepeatGR, SV))]$repeatClass)
-realDF <- as.data.frame(table(real))
+suppressWarnings(real <- RepeatGR[queryHits(findOverlaps(RepeatGR, SV))])
+realDF <- as.data.frame(table(real$repeatClass))
 
+repeatResults <- realDF[order(realDF$Freq, decreasing=TRUE),][1:15,]
 
-shuffleGRanges <- function(i, SV, RepeatGR) {
-  sstarts <- as.numeric(round(runif(length(SV)) * seqlengths(SV)[match(as.character(seqnames(SV)), names(seqlengths(SV)))] - width(SV)))
+x <- lapply(repeatResults$Var1, function(x) {
   
-  # this sampling is naive and reads could be assigned to N regions of the genome .... this can be tested ...
-  
-  shGR <- GRanges(seqnames=seqnames(SV),
-                  ranges=IRanges(start=sstarts,
-                                 end=sstarts+width(SV)-1))
-  return(RepeatGR[queryHits(findOverlaps(RepeatGR, shGR))]$repeatClass)
-}
+  svtargets <- to(findOverlaps(real[which(real$repeatClass == x),], SV, ignore.strand=TRUE))
+  repeatSV <- SV[unique(svtargets),]
+  return(c(length(unique(svtargets)), 
+           length(which(repeatSV$SVTYPE=="DEL")), 
+           length(which(repeatSV$SVTYPE=="INS")), 
+          length(which(repeatSV$SVTYPE=="DUP"))))
+} )
+repeatResults <- cbind(repeatResults, t(as.data.frame(x)))
+```
 
-replicates <- 101
-suppressWarnings(simulated <- lapply(seq(replicates), shuffleGRanges, SV=SV, RepeatGR=RepeatGR))
-simDF <- as.data.frame(table(unlist(simulated)) / replicates)
-
-simulationTest <- merge(x=realDF, y=simDF, by=1, all=TRUE)
-selectedRepeatsA <- simulationTest[which(as.numeric(simulationTest$Freq.x) > as.numeric(simulationTest$Freq.y)*2.5) ,]
-selectedRepeatsA$scale <- selectedRepeatsA$Freq.x / selectedRepeatsA$Freq.y
-selectedRepeatsB <- simulationTest[which(as.numeric(simulationTest$Freq.x)*2.5 < as.numeric(simulationTest$Freq.y)) ,]
-selectedRepeatsB$scale <- selectedRepeatsB$Freq.y / selectedRepeatsB$Freq.x
-selectedRepeats$Freq.y <- round(selectedRepeats$Freq.y, digits=1)
-
-diffAbund <- rbind(selectedRepeatsA, selectedRepeatsB)
-diffAbund <- diffAbund[order(diffAbund$scale, decreasing=TRUE),]
-diffAbund$Freq.y <- round(diffAbund$Freq.y, digits=1)
-diffAbund$scale <- round(diffAbund$scale, digits=1)
-
-kable(diffAbund, format="html", col.names=c("repeat class", "Observed", "Expected", "X"), caption="Repeat classes overlapping with SVs and their over- or under-representation", booktabs=TRUE, table.envir='table*', linesep="") %>% kable_styling(c("striped", "condensed"))
+```{r repeatAnalysisTable, echo=FALSE}
+kable(repeatResults, format="html", col.names=c("Repeat Class", "Frequency", "Unique SV", "Deletions", "Insertions", "Duplications"), caption="Counts of SVs overlapping with annotated Repeatmasker repeats", booktabs=TRUE, table.envir='table*', linesep="", row.names = FALSE) %>% kable_styling(c("striped", "condensed"))
 ```
 
 
@@ -368,7 +368,7 @@ This **`snakemake`** command performs x tasks
 The summary statistics reveal the following information for the dataset evaluated.
 
 
-```{r truthset}
+```{r truthset, echo=FALSE}
 
 infographicFile3 <- infoGraphicPlot3(identifier="truthset_validation", 
                  panelA=c(key="Precision",   value="0.951", icon="fa-dot-circle-o"), 
