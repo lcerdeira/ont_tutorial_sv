@@ -1,12 +1,13 @@
 # Statement of tutorial objectives
 
-The aim of this tutorial is to demonstrate a workflow for discovering and characterising genomic structural variations. This is acheived by mapping Nanopore long sequence reads to a reference genome and evaluating discordant mapping coordinates with the **`Sniffles`** software. This version of the tutorial may be used to identify large insertion and deletion events.
+The aim of this tutorial is to demonstrate a workflow for discovering and characterising genomic structural variations. This is achieved by mapping Nanopore long sequence reads to a reference genome and evaluating discordant mapping coordinates using the **`Sniffles`** software. This tutorial is based on the [Oxford Nanopore pipeline-structural-variation project](https://github.com/nanoporetech/pipeline-structural-variation) available from out Github pages and may be used to identify large insertion and deletion events.
 
-The tutorial is packaged with example data, and the workflow can be reproduced to address questions such as
+The tutorial is packaged with example data from the [Genome in a Bottle](https://www.nist.gov/programs-projects/genome-bottle), and the workflow can be reproduced to address questions such as
 
 * How many sequence reads map to the reference genome?
 * What is the depth of coverage across the genome
-
+* How many structural variations can be identified, and what how frequent are the different types
+* What is the precision and recall of structural variants from a reference truthset?
 
 Editing the workflow's configuration file, **`config.yml`**, will allow the analyses to be run using different DNA sequence collections, reference genomes, and with different parameters to tune the structural variation discovery workflow.
 

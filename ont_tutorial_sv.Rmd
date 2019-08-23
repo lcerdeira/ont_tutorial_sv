@@ -49,6 +49,8 @@ library(emojifont)
 library(vcfR)
 library(VariantAnnotation)
 library(TxDb.Hsapiens.UCSC.hg19.knownGene)
+library("org.Hs.eg.db")
+
 
 config <- yaml.load_file("config.yaml")
 #tutorialText   <- config$tutorialText
@@ -152,7 +154,7 @@ if (!file.exists(bamFile)) {
 # load the mapping data
 bamSummary <- bamSummarise(bamFile, blockSize=10000)
 
-SVMappingCharacteristicTable(bamSummary)
+SVMappingCharacteristicTable(bamSummary, validationResponse, bamFile)
 ```
 
   
@@ -259,7 +261,7 @@ print(karyogram)
 
 
 
-```{r loadVcf, eval=FALSE}
+```{r loadVcf, echo=FALSE, message=FALSE, warning=FALSE}
 vcf <- readVcf(file=vcfFile, genome=biocGenome)
 vcf <- trim(vcf)
 
@@ -269,12 +271,45 @@ seqlevels(vcf) <- paste0("chr",seqlevels(vcf))
 seqlevels(vcf, pruning.mode="coarse") <- seqlevels(vcf)[which(seqlevels(vcf) %in% seqlevels(txdb))]
 
 suppressWarnings(variants <- locateVariants(rowRanges(vcf), txdb, AllVariants()))
+# filter on some key columns; remove e.g. the TXID and CDSID that lead to duplicates ...
+variants <- data.frame(variants)[,c("seqnames", "start", "end", "width", "LOCATION", "QUERYID", "GENEID")]
+variants <- variants[!duplicated(variants),]
+vcfMeta <- Vcf2GRanges(vcfFile)
+
+genic <- data.frame(variants[which(variants$LOCATION == "coding"),])
+genic$SVTYPE <- as.character(vcfMeta[genic$QUERYID,]$SVTYPE)
+genic$SVLEN <- as.character(vcfMeta[genic$QUERYID,]$SVLEN)
+genic$SYMBOL <- as.character(mapIds(org.Hs.eg.db, keys=genic$GENEID, column="SYMBOL", keytype="ENTREZID"))
+
+
+kable(as.data.frame(table(as.character(variants$LOCATION))), format="html", col.names=c("SV location", "Count"), caption="Table summarising the genomic location of SVs called", booktabs=TRUE, table.envir='table*', linesep="") %>% kable_styling(c("striped", "condensed"))
 ```
+
+
+```{r codingRegions, echo=FALSE, message=FALSE, warning=FALSE}
+
+genes       <- sort(unique(genic[which(genic$SYMBOL!="NULL"),"SYMBOL"]))
+insertions  <- unlist(lapply(genes, function(x) { length(which(genic[which(genic$SYMBOL==x),"SVTYPE"]=="INS")) }))
+deletions   <- unlist(lapply(genes, function(x) { length(which(genic[which(genic$SYMBOL==x),"SVTYPE"]=="DEL")) }))
+duplications<- unlist(lapply(genes, function(x) { length(which(genic[which(genic$SYMBOL==x),"SVTYPE"]=="DUP")) }))
+vsizes      <- unlist(lapply(genes, function(x) { round(mean(as.integer(genic[which(genic$SYMBOL==x),"SVLEN"]))) }))
+chromosome  <- unlist(lapply(genes, function(x) { unique(as.character(genic[which(genic$SYMBOL==x),"seqnames"])) }))
+
+geneAssociation <- cbind(genes, chromosome, insertions, deletions, duplications, vsizes)
+geneAssociation[geneAssociation=="0"] <- " "
+
+
+kable(geneAssociation, format="html", col.names=c("GeneId", "Chromosome", "Insertions", "Deletions", "Duplications", "Mean variant size"), caption="Table listing genes containing SVs, the SV type and SV size", booktabs=TRUE, table.envir='table*', linesep="") %>% kable_styling(c("striped", "condensed"))
+```
+
+
+The table above shows how most structural variants are located in the non-protein coding regions of the genome; the majority being within either annotated introns or within the intergenic space. There are however a number of SVs within the the protein-coding space of the genome. It is helpful to identify the genes that are associated with the structural variants identified.
+
 
 
 # Structural Variations and Genomic Repeat Analysis
 
-```{r RepeatMasker} 
+```{r RepeatMasker, echo=FALSE, message=FALSE, warning=FALSE} 
 
 RepeatGR <- RepeatMaskerGR()
 SV <- Vcf2GRanges(vcfFile)
@@ -284,24 +319,65 @@ suppressWarnings(real <- RepeatGR[queryHits(findOverlaps(RepeatGR, SV))]$repeatC
 realDF <- as.data.frame(table(real))
 
 
-
-
 shuffleGRanges <- function(i, SV, RepeatGR) {
   sstarts <- as.numeric(round(runif(length(SV)) * seqlengths(SV)[match(as.character(seqnames(SV)), names(seqlengths(SV)))] - width(SV)))
+  
+  # this sampling is naive and reads could be assigned to N regions of the genome .... this can be tested ...
+  
   shGR <- GRanges(seqnames=seqnames(SV),
                   ranges=IRanges(start=sstarts,
                                  end=sstarts+width(SV)-1))
   return(RepeatGR[queryHits(findOverlaps(RepeatGR, shGR))]$repeatClass)
 }
 
-
 replicates <- 101
 suppressWarnings(simulated <- lapply(seq(replicates), shuffleGRanges, SV=SV, RepeatGR=RepeatGR))
 simDF <- as.data.frame(table(unlist(simulated)) / replicates)
 
-merge(x=realDF, y=simDF, by=1, all=TRUE)
+simulationTest <- merge(x=realDF, y=simDF, by=1, all=TRUE)
+selectedRepeatsA <- simulationTest[which(as.numeric(simulationTest$Freq.x) > as.numeric(simulationTest$Freq.y)*2.5) ,]
+selectedRepeatsA$scale <- selectedRepeatsA$Freq.x / selectedRepeatsA$Freq.y
+selectedRepeatsB <- simulationTest[which(as.numeric(simulationTest$Freq.x)*2.5 < as.numeric(simulationTest$Freq.y)) ,]
+selectedRepeatsB$scale <- selectedRepeatsB$Freq.y / selectedRepeatsB$Freq.x
+selectedRepeats$Freq.y <- round(selectedRepeats$Freq.y, digits=1)
 
+diffAbund <- rbind(selectedRepeatsA, selectedRepeatsB)
+diffAbund <- diffAbund[order(diffAbund$scale, decreasing=TRUE),]
+diffAbund$Freq.y <- round(diffAbund$Freq.y, digits=1)
+diffAbund$scale <- round(diffAbund$scale, digits=1)
+
+kable(diffAbund, format="html", col.names=c("repeat class", "Observed", "Expected", "X"), caption="Repeat classes overlapping with SVs and their over- or under-representation", booktabs=TRUE, table.envir='table*', linesep="") %>% kable_styling(c("striped", "condensed"))
 ```
+
+
+
+# Review of performance against a truthset
+
+This tutorial has used the **`pipeline-structural-variation`** workflow to identify candidate structural variants from the specified dataset. The data included within the tutorial is a subset of sequence data from **`Genome in a Bottle (GIAB)`**. The sequence data used corresponds to whole genome sequence data for individual **`GM002`** - the son from the Ashkenazim trio sequencing study. The GIAB consortium have published a truthset of structural variants for this GM002 individual that have been identified and validated using a variety of DNA sequence analysis methods and have been associated with the parental genomes. The [VCF file for the validated structural variations](https://ftp-trace.ncbi.nlm.nih.gov/giab/ftp/data/AshkenazimTrio/analysis/NIST_SVs_Integration_v0.6/) is available from the GIAB project.
+
+Software such as [Truvari](https://github.com/spiralgenetics/truvari/) has been written to enable the comparison of observed datasets against appropriate data truthsets. The **`Snakefile`** used to perform the structural variation analysis earlier within the tutorial also includes a **`target`** to perform benchmarking of the **`pipeline-structural-variation`** performance.
+
+
+This **`snakemake`** command performs x tasks
+
+* the GIAB truthset data are downloaded from the [NCBI ftp server](https://ftp-trace.ncbi.nlm.nih.gov/giab/ftp/data/AshkenazimTrio/analysis/NIST_SVs_Integration_v0.6/)
+* **`bedtools`** is used to identify the genomic regions intersecting between the GIAB truthset and the genomic regions investigated within this tutorial (the example dataset, for example, is looking at just human chromosome 20)
+* **`Truvari`** is used to compare the high-confidence set of SVs identified by Sniffles with the truthset SVs for genomic regions identified in the intersecting **`bedfile`**
+* summary statistics and performance metrics are written to a **`YAML`** file that can be parsed
+
+The summary statistics reveal the following information for the dataset evaluated.
+
+
+```{r truthset}
+
+infographicFile3 <- infoGraphicPlot3(identifier="truthset_validation", 
+                 panelA=c(key="Precision",   value="0.951", icon="fa-dot-circle-o"), 
+                 panelB=c(key="Recall",    value="0.949", icon="fa-braille"), 
+                 panelC=c(key="F1 score", value="95.0", icon="fa-percent"))
+
+ knitr::include_graphics(infographicFile3)
+```
+
 
 
 
