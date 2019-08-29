@@ -93,21 +93,28 @@ As a best practice this tutorial will separate primary DNA sequence data (the ba
 
 # Experimental setup
 
-The first required step for running a structural variation discovery workflow is to define the experimental design. 
-
-INSERT SOME TEXT ON WHAT CAN BE TUNED, REQUIRED FILE INPUTS AND RECOMMENDATIONS FOR DEPTH OF COVERAGE
-
-The design for the tutorial is defined within a YAML format configuration file (**`config.yaml`**). The tutorial's file is shown in the figure below.
+The first required step for running a structural variation discovery workflow is to define the experimental design. The design is configured within a YAML format file (**`config.yaml`**). The tutorial's file is shown in the figure below.
 
 
 ![](Static/Images/ExperimentalDesign.png) 
 
+There are several critical parameters that should be appropriately specified
 
+* **`input_fastq`** specifies the fastq sequence file containing sequence reads that should be used for SV discovery. This file must be fastq format - the **`pipeline-structural-variation`** workflow can use fastq files that have been compressed using **`gzip`**.
+* **`reference_fasta`** specifies the path to the **fasta** format reference genome to use. This sequence may be compressed using **`gzip`**
+* **`sample_name`** This is a name for the analysis - multiple runs can be stored under the **`Analysis`** folder
+* **`biocGenome`** is used to instruct the R/Bioconductor software which version of a genome is to be used for the analysis
+* **`GeneIdMappings`**
+* **`GenomeAnnotation`**
 
+Other parameters may be used to tune the workflow characteristics and reported content
 
-* **`pipeline`** identifies the workflow that this configuration file belongs to
-
-SOME TEXT AND DESCRIPTION FOR WHAT THE INDIVIDUAL PARAMETERS ACTUALLY DO
+* **`min_sv_length`** - The length of the shortest SVs to report
+* **`max_sv_length`** - The length of the longest SVs to report
+* **`min_read_length`** - Minimum read length - shorter reads will be discarded during the analysis
+* **`min_read_mapping_quality`** - Minimum mapping quality. Reads with lower mapping qualities will be discarded
+* **`min_read_support`** - Minimum read support required to call a SV (**auto** for auto-detect)
+* **`tutorialText`** is used to define whether the full tutorial text is included in the report; set this to **False** for a more result focused report
 
 
 \newpage

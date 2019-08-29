@@ -48,6 +48,7 @@ library(nanopoRe) # devtools::install_github("sagrudd/nanopoRe") # unloadNamespa
 library(emojifont)
 library(vcfR)
 library(VariantAnnotation)
+library(jsonlite)
 
 config <- yaml.load_file("config.yaml")
 #tutorialText   <- config$tutorialText
@@ -92,7 +93,7 @@ eval(parse(text=paste0("txdb <- ",config$GenomeAnnotation)))
 
 # Study design
 
-The **`ont_tutorial_sv`** script is used to generate this report. The configuration file, **`config.yaml`** has been parsed and the fastq format DNA sequence file has been identified as **` `r input_fastq` `**.
+The **`ont_tutorial_sv.Rmd`** script was used to generate this report. The configuration file, **`config.yaml`** has been parsed and the fastq format DNA sequence file has been identified as **` `r input_fastq` `**.
 
 ```{r fastqSummary, cache=FALSE, echo=FALSE}
 if (!file.exists(input_fastq)) {
@@ -115,7 +116,7 @@ kable(file.data, format="html", caption="Table summarising provided FASTQ file c
 ```
 
 
-The table above provides an abbreviated summary of the provided fastq format sequence file used by the tutorial. The **md5sum** is a checksum that can be used to track the integrity of a specified sequence file - this value should be unique to each DNA sequence file.
+The table above provides an abbreviated summary of the provided fastq format sequence file used by the tutorial. The **checksum** is an *md5sum* checksum that can be used to track the integrity of a specified sequence file - this value should be unique to each DNA sequence file. The size of the fastq sequence file, the number of sequence reads and the total number of sequence bases are also presented.
 
 
 # Mapping Summary
@@ -138,9 +139,12 @@ infographicFile <- infoGraphicPlot4(identifier="mappingSummary",
  knitr::include_graphics(infographicFile)
 ```
 
+The summary plot above summarises key observations from the review of the sequence mapping data. These metrics include the number of primary sequence alignments (there will also be other mapping results as either secondary or supplementary mappings that are summarised in a table below), the mapping yield that describes that number of DNA sequence bases that are mapped (primary mapped results only) and the measure of mean accuracy and identity across the primary mapped reads. Accuracy describes the number of correctly mapped sequences bases relative to the reference genome and considers mismatches and INDELs. Identity is similar to accuracy but ignores INDELs. Please note that this is a review of mapping quality - not raw sequence accuracy.
+
+
 ## Assessment of mapping quality and identity
 
-The graphic above has summarised the dimensions of the mapped data. 
+The distributions of mapping accuracy and identity can also be plotted as histograms. The histograms for these distributions is shown below.
 
 ```{r mappingIdentity, echo=FALSE, message=FALSE}
 
@@ -155,6 +159,9 @@ LeftRightPlot(p1, p2)
 
 # Mapping characteristics
 
+The tabulated data and plots above have commented on the overall number of primary mapped sequence reads and have commented on their accuracy and identity. The table below shows additional review of the mapping characteristics where primary, secondary and supplementary mapping reads are considered separately and additional information on the read lengths, read qualities and mapping qualities are presented.
+
+
 ```{r loadMapData, echo=FALSE, warning=FALSE, message=FALSE}
 
 if (!file.exists(bamFile)) {
@@ -168,6 +175,9 @@ bamSummary <- bamSummarise(bamFile, blockSize=10000)
 SVMappingCharacteristicTable(bamSummary, validationResponse, bamFile)
 ```
 
+
+
+The depth and uniformity of sequence coverage across the genome is important for effective SV calling. While the table above provides a mean coverage measure, this does not reveal the amount of variation in coverage across the mapped regions. A histogram showing the distribution of depth-of-coverage across the mapped reference is shown in the figure below. 
   
 ```{r mappingAccuracy, echo=FALSE, warning=FALSE, message=FALSE}
 
@@ -176,36 +186,7 @@ print(covHist)
 
 ```
   
-  
-  
-```{r chromosomeByChromosome, echo=FALSE, message=FALSE}
 
-chrIds <- getChromosomeIds()
-chrIds <- chrIds[grep("(MT)|(\\.)", chrIds, invert=TRUE)]
-
-chrMapping <- chromosomeMappingSummary(chrIds, bamFile)
-
-kable(chrMapping, format="html", caption="Table summarising mapping characteristics", booktabs=TRUE, table.envir='table*', linesep="", escape = FALSE) %>%
-  kable_styling(c("striped", "condensed"))
-
-```
-  
-The table above summarises the sequence mapping characteristics for each of the chromosomes specified within the provided reference genome. 
-
-
-
-  
-  
-  
-
-
-```{r bamSum, warning=FALSE, echo=FALSE, message=FALSE}
-suppressWarnings(coverageData <- bamSummaryToCoverage(bamFile, tilewidth=250000))
-# filter out the non-canonical chromosomes ...
-coverageData <- coverageData[-grep("(MT)|(\\.)", as.character(seqnames(coverageData))),]
-
-plotDepthOfCoverageMegablock(coverageData)
-```
   
   
 
@@ -296,6 +277,9 @@ genic$SYMBOL <- as.character(mapIds(org.Hs.eg.db, keys=genic$GENEID, column="SYM
 ```{r genomeComponentTable, echo=FALSE}
 svloctable <- as.data.frame(table(as.character(variants$LOCATION)))
 
+# Var1 is cast as a factor; convert to vector
+svloctable$Var1 <- as.character(svloctable$Var1)
+
 svloctable$genes <- lapply(svloctable$Var1, function(x) { length(which(!is.na(unique(variants[which(variants$LOCATION==x),"GENEID"])))) })
 svloctable$del <- lapply(svloctable$Var1, function(x) { length(which(mcols(vcfMeta[variants[which(variants$LOCATION==x),"QUERYID"],])$SVTYPE=="DEL")) })
 svloctable$ins <- lapply(svloctable$Var1, function(x) { length(which(mcols(vcfMeta[variants[which(variants$LOCATION==x),"QUERYID"],])$SVTYPE=="INS")) })
@@ -378,17 +362,19 @@ The summary statistics reveal the following information for the dataset evaluate
 
 ```{r truthset, echo=FALSE}
 
+truvariJson <- fromJSON(file.path("Analysis", sample_name, "evaluation_summary.json"))
+
 infographicFile3 <- infoGraphicPlot3(identifier="truthset_validation", 
-                 panelA=c(key="Precision",   value="0.964", icon="fa-dot-circle-o"), 
-                 panelB=c(key="Recall",    value="0.929", icon="fa-braille"), 
-                 panelC=c(key="F1 score", value="94.6", icon="fa-percent"))
+                 panelA=c(key="Precision",   value=round(truvariJson$precision, digits=3), icon="fa-dot-circle-o"), 
+                 panelB=c(key="Recall",    value=round(truvariJson$recall, digits=3), icon="fa-braille"), 
+                 panelC=c(key="F1 score", value=round(truvariJson$f1, digits=3), icon="fa-percent"))
 
  knitr::include_graphics(infographicFile3)
 ```
 
-* **precision** is the fraction of SVs identified that are correct (a background of false positive SVs will reduce the precision score)
-* **recall** is the fraction of SVs from the truthset that are correctly identified within the workflow (a background of false negative SVs will reduce the recall score)
-* **F1 score** is the harmonic mean of the precision and recall and summarises the overall accuracy for the analysis.
+* **`precision`** is the fraction of SVs identified that are correct (a background of false positive SVs will reduce the precision score)
+* **`recall`** is the fraction of SVs from the truthset that are correctly identified within the workflow (a background of false negative SVs will reduce the recall score)
+* **`F1 score`** is the harmonic mean of the precision and recall and summarises the overall accuracy for the analysis.
 
 
 
