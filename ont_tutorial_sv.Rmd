@@ -92,7 +92,7 @@ eval(parse(text=paste0("txdb <- ",config$GenomeAnnotation)))
 
 # Study design
 
-The **`ont_tutorial_sv`** script has been used to generate this report. The configuration file, **`config.yaml`** has been parsed and the fastq format DNA sequence file has been identified as **` `r input_fastq` `**.
+The **`ont_tutorial_sv`** script is used to generate this report. The configuration file, **`config.yaml`** has been parsed and the fastq format DNA sequence file has been identified as **` `r input_fastq` `**.
 
 ```{r fastqSummary, cache=FALSE, echo=FALSE}
 if (!file.exists(input_fastq)) {
@@ -115,7 +115,15 @@ kable(file.data, format="html", caption="Table summarising provided FASTQ file c
 ```
 
 
+The table above provides an abbreviated summary of the provided fastq format sequence file used by the tutorial. The **md5sum** is a checksum that can be used to track the integrity of a specified sequence file - this value should be unique to each DNA sequence file.
+
+
 # Mapping Summary
+
+The **`minimap2`** software has been used to map the fastq format sequence reads to the specified reference genome. The results have been collated in a **`BAM`** format mapping file that has been both sorted and indexed. 
+
+The mapping results from the BAM file have been collated and are summarised below. The review of sequence mapping characteristics allows for a review of mapping performance, the sequence identity and the ....
+
 
 ```{r mappingExecutiveSummary, echo=FALSE, message=FALSE}
 bamSummary <- bamSummarise(bamFile)
@@ -182,7 +190,7 @@ kable(chrMapping, format="html", caption="Table summarising mapping characterist
 
 ```
   
-
+The table above summarises the sequence mapping characteristics for each of the chromosomes specified within the provided reference genome. 
 
 
 
