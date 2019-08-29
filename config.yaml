@@ -4,9 +4,9 @@
 # pass an appropriate path to the input-files (the ../ prefix is sufficient for this demo)
 
 # FASTQ file or folder containing FASTQ files
-input_fastq: "../RawData/GM24385.q7.all.15x.fastq"
+input_fastq: "../RawData/GM24385_nf7_chr8.fastq.gz"
 # FASTA file containing the reference genome
-reference_fasta: "../ReferenceData/human_g1k_v37.fasta"
+reference_fasta: "../ReferenceData/human_g1k_v37_chr8.fasta"
 # Minimum SV length
 min_sv_length: 40
 # Maximum SV length
@@ -18,7 +18,7 @@ min_read_mapping_quality: 20
 # Minimum read support required to call a SV (auto for auto-detect)
 min_read_support: 'auto'
 # Sample name
-sample_name: "GM24385.15"
+sample_name: "GM24385.nf7.chr8_c"
 
 #################################
 ## General pipeline parameters ##

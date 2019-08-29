@@ -371,13 +371,16 @@ The summary statistics reveal the following information for the dataset evaluate
 ```{r truthset, echo=FALSE}
 
 infographicFile3 <- infoGraphicPlot3(identifier="truthset_validation", 
-                 panelA=c(key="Precision",   value="0.951", icon="fa-dot-circle-o"), 
-                 panelB=c(key="Recall",    value="0.949", icon="fa-braille"), 
-                 panelC=c(key="F1 score", value="95.0", icon="fa-percent"))
+                 panelA=c(key="Precision",   value="0.964", icon="fa-dot-circle-o"), 
+                 panelB=c(key="Recall",    value="0.929", icon="fa-braille"), 
+                 panelC=c(key="F1 score", value="94.6", icon="fa-percent"))
 
  knitr::include_graphics(infographicFile3)
 ```
 
+* **precision** is the fraction of SVs identified that are correct (a background of false positive SVs will reduce the precision score)
+* **recall** is the fraction of SVs from the truthset that are correctly identified within the workflow (a background of false negative SVs will reduce the recall score)
+* **F1 score** is the harmonic mean of the precision and recall and summarises the overall accuracy for the analysis.
 
 
 
