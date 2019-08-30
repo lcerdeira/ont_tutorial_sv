@@ -1,5 +1,5 @@
 ---
-title: "Whole genome structural variation analysis using Nanopore long DNA sequence reads"
+title: "Structural variation analysis using Nanopore long DNA sequence reads"
 date: "Report created: `r Sys.Date()`"
 output:
   html_document:
@@ -49,6 +49,7 @@ library(emojifont)
 library(vcfR)
 library(VariantAnnotation)
 library(jsonlite)
+library(writexl)
 
 config <- yaml.load_file("config.yaml")
 #tutorialText   <- config$tutorialText
@@ -116,14 +117,14 @@ kable(file.data, format="html", caption="Table summarising provided FASTQ file c
 ```
 
 
-The table above provides an abbreviated summary of the provided fastq format sequence file used by the tutorial. The **checksum** is an *md5sum* checksum that can be used to track the integrity of a specified sequence file - this value should be unique to each DNA sequence file. The size of the fastq sequence file, the number of sequence reads and the total number of sequence bases are also presented.
+The table above provides an abbreviated summary of the provided fastq format sequence file used by the tutorial. The **checksum** is an *md5sum* checksum that can be used to track the integrity of a specified sequence file - this value should be unique to each DNA sequence file. 
 
 
 # Mapping Summary
 
 The **`minimap2`** software has been used to map the fastq format sequence reads to the specified reference genome. The results have been collated in a **`BAM`** format mapping file that has been both sorted and indexed. 
 
-The mapping results from the BAM file have been collated and are summarised below. The review of sequence mapping characteristics allows for a review of mapping performance, the sequence identity and the ....
+The mapping results from the BAM file have been collated and are summarised below. 
 
 
 ```{r mappingExecutiveSummary, echo=FALSE, message=FALSE}
@@ -139,7 +140,7 @@ infographicFile <- infoGraphicPlot4(identifier="mappingSummary",
  knitr::include_graphics(infographicFile)
 ```
 
-The summary plot above summarises key observations from the review of the sequence mapping data. These metrics include the number of primary sequence alignments (there will also be other mapping results as either secondary or supplementary mappings that are summarised in a table below), the mapping yield that describes that number of DNA sequence bases that are mapped (primary mapped results only) and the measure of mean accuracy and identity across the primary mapped reads. Accuracy describes the number of correctly mapped sequences bases relative to the reference genome and considers mismatches and INDELs. Identity is similar to accuracy but ignores INDELs. Please note that this is a review of mapping quality - not raw sequence accuracy.
+The summary plot above presents key observations from the review of the sequence mapping results. These results highlighted include the number of primary sequence alignments (there will also be other mapping results as either secondary or supplementary mappings that are summarised in a table below), the mapping yield that describes that number of DNA sequence bases that are mapped (primary mapped results only) and the measure of mean accuracy and identity across the primary mapped reads. Accuracy describes the number of correctly mapped sequences bases relative to the reference genome and considers mismatches and INDELs. Identity is similar to accuracy but ignores INDELs. Please note that this is a review of mapping quality - not raw sequence accuracy.
 
 
 ## Assessment of mapping quality and identity
@@ -177,7 +178,7 @@ SVMappingCharacteristicTable(bamSummary, validationResponse, bamFile)
 
 
 
-The depth and uniformity of sequence coverage across the genome is important for effective SV calling. While the table above provides a mean coverage measure, this does not reveal the amount of variation in coverage across the mapped regions. A histogram showing the distribution of depth-of-coverage across the mapped reference is shown in the figure below. 
+The depth and uniformity of sequence coverage across the genome is important for effective SV calling. While the table above provides a mean coverage measure, this does not reveal the amount of variation in coverage across the mapped regions. A histogram showing the distribution of depth-of-coverage across the mapped reference sequence is shown in the figure below. The mean coverage value is highlighted as a vertical red line.
   
 ```{r mappingAccuracy, echo=FALSE, warning=FALSE, message=FALSE}
 
@@ -194,7 +195,7 @@ print(covHist)
 
 # Investigation of VCF file produced by Sniffles
 
-parsing the VCF makes more sense than relying on existing parsers; large deletions are not properly defined within the ALT/REF fields and need to be parsed from variant INFO field
+The **`Sniffles`** software has been used to identify candidate SVs from the mapping data; the resulting SVs have been filtered by the **`pipeline-structural-variation`** workflow to produce a high-confidence SV dataset. Additional information on this high-confidence subset of SVs is presented in the sections below.
 
 ## Structural Variants - Executive Summary
 
@@ -212,6 +213,8 @@ infographicFile2 <- infoGraphicPlot3(identifier="SV_types",
 
  knitr::include_graphics(infographicFile2)
 ```
+
+The plot above lists the number of insertions, deletions and duplications counted in the high-confidence set of SVs.
 
 ```{r SVsummarytable, echo=FALSE}
 SVsummary <- NULL
@@ -235,13 +238,14 @@ kable(SVsummary, format="html", col.names=c("SV type", "Count", "Mean size (nt)"
 
 ```
 
+The table above provides some more information on the size distributions of the SVs identified.
 
 ```{r svLengthDistribution, echo=FALSE}
 nul <- capture.output(svdist <- svLengthDistribution(vcfFile))
 print(svdist)
 ```
 
-
+The size distribution of different SV types can also be plotted as a histogram. In the figure above, the frequency of different sized SVs is plotted. Please note that the length of the SV has been plotted using a log10 scale.
 
 ```{r karyogram, echo=FALSE, warning=FALSE, message=FALSE}
 
@@ -250,9 +254,12 @@ print(karyogram)
 
 ```
 
+The figure above shows a karyogram shaded with the location of structural variants shaded by insertion, deletion and duplication types. 
+
+
 # Genomic placement of SVs in annotated genome.
 
-Genes are characterised by patterns of large introns, short exons and various regulatory regions - and are themselves interspersed by typically large intergenic regions. When considering the collections of structural variations identified, it is useful to consider how the structural variations are placed within the genome. 
+SVs can be seen to be distributed across the reference genome used for the analysis; and do not appear to be clustered around any specific chromosomal location. It is useful to look for the subset of structural variations that overlap with the annotated genes. 
 
 
 ```{r loadVcf, echo=FALSE, message=FALSE, warning=FALSE, results='hide'}
@@ -272,7 +279,18 @@ genic <- data.frame(variants[which(variants$LOCATION == "coding"),])
 genic$SVTYPE <- as.character(vcfMeta[genic$QUERYID,]$SVTYPE)
 genic$SVLEN <- as.character(vcfMeta[genic$QUERYID,]$SVLEN)
 genic$SYMBOL <- as.character(mapIds(org.Hs.eg.db, keys=genic$GENEID, column="SYMBOL", keytype="ENTREZID"))
+genic$start <- as.character(start(vcfMeta[genic$QUERYID,]))
+genic$end <- as.character(end(vcfMeta[genic$QUERYID,]))
+
+excelData <- merge(x=as.data.frame(vcfMeta), y=variants, by.x="row.names", by.y="QUERYID")[,c("seqnames.x","start.x","end.x","width.x","SVTYPE","SVLEN","RE","SU","LOCATION", "GENEID")]
+excelData$SYMBOL <- as.character(mapIds(org.Hs.eg.db, keys=excelData$GENEID, column="SYMBOL", keytype="ENTREZID"))
+excelData$GENEID[which(is.na(excelData$GENEID))] <-  ""
+excelData$SYMBOL[which(excelData$SYMBOL=="NULL")] <-  ""
+# write excel file of results
+write_xlsx(excelData, path = file.path(getRpath(), "sv_genespace_overlap.xlsx"))
 ```
+
+The complete list of structural variants and their overlaps with annotated genes have been written to an Excel file called **`sv_genespace_overlap.xlsx`**. This is located within the **`R`** folder of the **`Analysis`** results. 
 
 ```{r genomeComponentTable, echo=FALSE}
 svloctable <- as.data.frame(table(as.character(variants$LOCATION)))
@@ -289,7 +307,7 @@ kable(svloctable, format="html", col.names=c("SV location", "Count", "Genes", "D
 ```
 
 
-The **coding** SVs identified in the table above, overlap with annotated gene exons. A deletion, insertion, or duplication event may have functional implications. 
+The **coding** SVs identified in the table above, overlap with annotated gene exons. A deletion, insertion, or duplication event may have functional implications. The table above shows how most SVs are located in the non-protein coding regions of the genome; the majority being within either annotated introns or within the intergenic space. There are however a number of SVs within the the protein-coding space of the genome. The SVs that overlap with the gene exons are summarised in the table below.
 
 ```{r codingRegions, echo=FALSE, message=FALSE, warning=FALSE}
 
@@ -299,20 +317,22 @@ insertions  <- unlist(lapply(genes, function(x) { length(which(genic[which(genic
 duplications<- unlist(lapply(genes, function(x) { length(which(genic[which(genic$SYMBOL==x),"SVTYPE"]=="DUP")) }))
 vsizes      <- unlist(lapply(genes, function(x) { round(mean(as.integer(genic[which(genic$SYMBOL==x),"SVLEN"]))) }))
 chromosome  <- unlist(lapply(genes, function(x) { unique(as.character(genic[which(genic$SYMBOL==x),"seqnames"])) }))
+start       <- unlist(lapply(genes, function(x) { unique(as.character(genic[which(genic$SYMBOL==x),"start"])) }))
+end         <- unlist(lapply(genes, function(x) { unique(as.character(genic[which(genic$SYMBOL==x),"end"])) }))
 
-geneAssociation <- cbind(genes, chromosome, deletions, insertions, duplications, vsizes)
+geneAssociation <- cbind(genes, chromosome, start, end, deletions, insertions, duplications, vsizes)
 geneAssociation[geneAssociation=="0"] <- " "
 
 
-kable(geneAssociation, format="html", col.names=c("GeneId", "Chromosome", "Deletions", "Insertions", "Duplications", "Mean variant size"), caption="Table listing genes containing SVs, the SV type and SV size", booktabs=TRUE, table.envir='table*', linesep="") %>% kable_styling(c("striped", "condensed"))
+kable(geneAssociation, format="html", col.names=c("GeneId", "Chromosome", "Start", "End", "Deletions", "Insertions", "Duplications", "Mean variant size"), caption="Table listing genes containing SVs, the SV type and SV size", booktabs=TRUE, table.envir='table*', linesep="") %>% kable_styling(c("striped", "condensed"))
 ```
 
-
-The table above shows how most structural variants are located in the non-protein coding regions of the genome; the majority being within either annotated introns or within the intergenic space. There are however a number of SVs within the the protein-coding space of the genome. It is helpful to identify the genes that are associated with the structural variants identified.
 
 
 
 # Structural Variations and Genomic Repeat Analysis
+
+Much of the vertebrate genome is composed of repeated DNA sequence elements. Different types of SV have been associated with these genomic repeat elements. The table below summarised the overlap of SVs identified with the annotated repeat elements from a **`RepeatMasker`** database of human repeats ([Smit AFA, Hubley R and Green P - RepeatMasker Open-4.0](http://www.repeatmasker.org)). The full corresponding dataset is available as an Excel format spreadsheet file called **`sv_repeats_overlap.xlsx`** in the **`Analysis/R`** results folder.
 
 ```{r RepeatMasker, echo=FALSE, message=FALSE, warning=FALSE, results='hide'} 
 
@@ -320,7 +340,8 @@ RepeatGR <- RepeatMaskerGR()
 SV <- Vcf2GRanges(vcfFile)
 seqlengths(SV) <- getSeqLengths(names(seqlengths(SV)))
 
-suppressWarnings(real <- RepeatGR[queryHits(findOverlaps(RepeatGR, SV))])
+overlaps <- findOverlaps(RepeatGR, SV)
+suppressWarnings(real <- RepeatGR[queryHits(overlaps)])
 realDF <- as.data.frame(table(real$repeatClass))
 
 repeatResults <- realDF[order(realDF$Freq, decreasing=TRUE),][1:15,]
@@ -335,29 +356,23 @@ x <- lapply(repeatResults$Var1, function(x) {
           length(which(repeatSV$SVTYPE=="DUP"))))
 } )
 repeatResults <- cbind(repeatResults, t(as.data.frame(x)))
+
+xlsx_repeats <- data.frame(cbind(as.data.frame(real), mcols(SV[subjectHits(overlaps),])[,c("SVTYPE","SVLEN","RE","SU")]))
+write_xlsx(xlsx_repeats, path = file.path(getRpath(), "sv_repeats_overlap.xlsx"))
 ```
 
 ```{r repeatAnalysisTable, echo=FALSE}
 kable(repeatResults, format="html", col.names=c("Repeat Class", "Frequency", "Unique SV", "Deletions", "Insertions", "Duplications"), caption="Counts of SVs overlapping with annotated Repeatmasker repeats", booktabs=TRUE, table.envir='table*', linesep="", row.names = FALSE) %>% kable_styling(c("striped", "condensed"))
 ```
 
+The table above describes the number of repeat elements that overlap with annotated SVs. The unique SVs are resolved by type. This table presents count data only and no form of enrichment analysis has been performed to identify the over-represented repeat classes.
 
 
 # Review of performance against a truthset
 
-This tutorial has used the **`pipeline-structural-variation`** workflow to identify candidate structural variants from the specified dataset. The data included within the tutorial is a subset of sequence data from **`Genome in a Bottle (GIAB)`**. The sequence data used corresponds to whole genome sequence data for individual **`GM002`** - the son from the Ashkenazim trio sequencing study. The GIAB consortium have published a truthset of structural variants for this GM002 individual that have been identified and validated using a variety of DNA sequence analysis methods and have been associated with the parental genomes. The [VCF file for the validated structural variations](https://ftp-trace.ncbi.nlm.nih.gov/giab/ftp/data/AshkenazimTrio/analysis/NIST_SVs_Integration_v0.6/) is available from the GIAB project.
+This tutorial has used the **`pipeline-structural-variation`** workflow to identify candidate structural variants from the specified dataset. The data included within the tutorial is a subset of sequence data from **`Genome in a Bottle (GIAB)`**. The sequence data used corresponds to whole genome sequence data for individual **`GM002`** - the son from the Ashkenazim trio sequencing study. The GIAB consortium have published a truthset of structural variants for this GM002 individual that have been identified and validated using a variety of DNA sequence analysis methods and have been associated with the parental genomes. The [VCF file for the validated structural variations](https://ftp-trace.ncbi.nlm.nih.gov/giab/ftp/data/AshkenazimTrio/analysis/NIST_SVs_Integration_v0.6/) is available from the GIAB.
 
-Software such as [Truvari](https://github.com/spiralgenetics/truvari/) has been written to enable the comparison of observed datasets against appropriate data truthsets. The **`Snakefile`** used to perform the structural variation analysis earlier within the tutorial also includes a **`target`** to perform benchmarking of the **`pipeline-structural-variation`** performance.
-
-
-This **`snakemake`** command performs x tasks
-
-* the GIAB truthset data are downloaded from the [NCBI ftp server](https://ftp-trace.ncbi.nlm.nih.gov/giab/ftp/data/AshkenazimTrio/analysis/NIST_SVs_Integration_v0.6/)
-* **`bedtools`** is used to identify the genomic regions intersecting between the GIAB truthset and the genomic regions investigated within this tutorial (the example dataset, for example, is looking at just human chromosome 20)
-* **`Truvari`** is used to compare the high-confidence set of SVs identified by Sniffles with the truthset SVs for genomic regions identified in the intersecting **`bedfile`**
-* summary statistics and performance metrics are written to a **`YAML`** file that can be parsed
-
-The summary statistics reveal the following information for the dataset evaluated.
+Software such as [Truvari](https://github.com/spiralgenetics/truvari/) has been written to enable the comparison of VCF format SV datasets against reference truthsets. The **`Snakefile`** used to perform the structural variation analysis was run with the **`eval`** parameter that has compared the performance of this workflow against the GIAB truthset. This has produced a **`JSON`** file of performance metrics. This is shown in the panel below.
 
 
 ```{r truthset, echo=FALSE}
@@ -376,6 +391,41 @@ infographicFile3 <- infoGraphicPlot3(identifier="truthset_validation",
 * **`recall`** is the fraction of SVs from the truthset that are correctly identified within the workflow (a background of false negative SVs will reduce the recall score)
 * **`F1 score`** is the harmonic mean of the precision and recall and summarises the overall accuracy for the analysis.
 
+
+# Explore structural variation using IGV
+
+
+The Integrative Genomics Viewer (**`IGV`**) is a tool (@10.1093/bib/bbs017, @Robinsone31), that has been installed by **`conda`**, for the visualisation of genomics data. The software provides functionality for the display of sequence mapping data from BAM files that can subsequently be overlaid with "tracks" of information that can include depth-of-coverage for mapping data and gene annotations. 
+
+![](Static/Images/SV_homozygous_insertion.PNG)
+
+The figure above presents a screenshot from the **`IGV`** software. This has been selected as a 1.5kb insertion from the filtered high-quality SVs. In the centre region of the viewer the insertion event is displayed. The blue and pink shading reveals that reads are mapping to both the forward and reverse strands of the reference DNA - the insertion is observed across all reads and is therefore a probable homozygous insertion.
+
+IGV can also view deletions - the figure below shows what could be a 68 bp heterozygous deletion. There is a reasonable amount of read support for this deletion and the deletion appears to have been sampled from both DNA sequence strands.
+
+![](Static/Images/SV_heterozygous_deletion.PNG)
+
+**`IGV`** can be started from the command line by using the command `igv`.
+
+We would like to explore the read mapping information around the SV located within the **MUC7** gene. The command below will open the **`IGV`** browser to the appropriate genome coordinates - in this example we are using the feature with coordinates `[Chr 4] Start=71346143, Stop=71348210` - this corresponds to a region 1kb up- and down-stream on the annotated deletion within the **`MUC7`** gene - this should look much the heterozygous deletion figure shown above.
+
+
+```
+igv -g ./ReferenceData/human_g1k_v37_chr4.fasta ./Analysis/GM24385.nf7.chr4/alignment/GM24385.nf7.chr4_minimap2.bam 4:71346143-71348210
+```
+
+
+# Explore structural variation using ribbon
+
+**`Ribbon`** is an interactive structural variation visualisation software that enables the review of mapping characteristics at a per-read resolution rather than the genomic region resolution used by most other genome browsers (@Nattestad082123). **`Ribbon`** has been implemented as a web-application and data analysis is run within your web-browser. To explore the data with **`Ribbon`**, please open the following link and follow the instructions provided by the author. You should provide **`Ribbon`** with the **`BAM`** file of mapping results and your **`VCF`** file of structural variants to get started
+
+
+[http://genomeribbon.com/](http://genomeribbon.com/)
+
+
+![](Static/Images/SV_ribbon.PNG)
+
+The image above shows a screenshot from the **`Ribbon`** software presenting the mapping characteristics from reads included in the tutorial dataset. Reads are presented as blue lines within the top panel. One of these reads is highlighted in red and the bottom panel presents the mapping arrangement of this read to the reference genome. This read appears to show a sequence rearrangement that could not be observed with other track-based genome browsers. The structural variants presented in the VCF file are shown a blue vertical ticks in the figure.
 
 
 # Reproducible research - produce your own report

@@ -6,7 +6,7 @@ The **`R`** code to prepare your own report is included in the distributed **`Rm
 
 \fontsize{8}{12}
 ```
-rstudio ont_tutorial_cas9.Rmd
+rstudio ont_tutorial_sv.Rmd
 ```
 \fontsize{10}{14}
 
@@ -18,37 +18,9 @@ rstudio ont_tutorial_cas9.Rmd
 To extract the whole set of **`R code`** from the **`Rmarkdown`**, use the **`purl`** command - this will extract the R code into its own file.
 
 ```
-knitr::purl("ont_tutorial_cas9.Rmd", quiet=TRUE)
+knitr::purl("ont_tutorial_sv.Rmd", quiet=TRUE)
 ```
 
-
-# Further explore the mapping data
-
-Running the tutorial Rmarkdown script saves the R data objects, presentation methods, and results in a sessionFile. This saved session can be opened directly and it is possible to further explore the data in a dynamic fashion.
-
-To load the data
-
-```
-rstudio
-```
-
-Once the R console has loaded re-load the saved session with
-
-```
-library(session)
-restore.session("Analysis/Results/enrichment.Rdata")
-```
-
-There are a number of R objects that could be of immediate interest for further exploration of the data
-
-* **`ontargetUniverse`** - a **`GenomicRanges GRanges`** object containing the genomic coordinates and summary information for the on-target regions of the genome
-* **`offtargetUniverse`** - a **`GenomicRanges GRanges`** object containing the genomic coordinates and summary information for the off-target regions of the genome
-* **`backgroundUniverse`** - a **`GenomicRanges GRanges`** object containing the genomic coordinates and summary information for the background regions of the genome
-* **`aggregatedGR`**  - a fine resolution **`GenomicRanges GRanges`** object giving depth of coverage information over the target region(s) and the proximal sequence.
-
-
-
-\pagebreak
 
 # Glossary of terms
 
@@ -67,9 +39,6 @@ There are a number of R objects that could be of immediate interest for further 
 * __QV__  the quality value, -log10(p) that any given base is incorrect. QV may be either at the individual base level, or may be averaged across whole sequences
 
 * __Rmarkdown__ is an extension to markdown. Functional R code can be embedded in a plain-text document and subsequently rendered to other formats including the PDF format of this report.
-
-
-\pagebreak
 
 
 

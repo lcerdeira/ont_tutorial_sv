@@ -1,12 +1,12 @@
 # Statement of tutorial objectives
 
-The aim of this tutorial is to demonstrate a workflow for discovering and characterising genomic structural variations (SV). This is achieved by mapping Nanopore long sequence reads to a reference genome and evaluating discordant mapping characteristics using the **`Sniffles`** software. This tutorial is based on the [Oxford Nanopore pipeline-structural-variation project](https://github.com/nanoporetech/pipeline-structural-variation) available from our Github pages and may be used to identify genomic insertion, duplication and deletion events.
+The aim of this tutorial is to demonstrate a workflow for discovering and characterising genomic structural variations (SV). This is achieved by mapping Nanopore long sequence reads to a reference genome and evaluating discordant mapping characteristics using the **`Sniffles`** software. This tutorial is based on the Oxford Nanopore [pipeline-structural-variation project](https://github.com/nanoporetech/pipeline-structural-variation) and is available from the linked Github pages. The pipeline may be used to identify genomic insertion, duplication and deletion events.
 
 The tutorial is packaged with example data from the [Genome in a Bottle](https://www.nist.gov/programs-projects/genome-bottle) project, and the workflow can be reproduced to address questions such as
 
 * How many sequence reads map to the reference genome?
-* What is the depth of sequence coverage across the genome, and across individual chromosomes?
-* How many SVs can be identified, what is their size distribution, and  how frequent are the different types of SV?
+* What is the depth of sequence coverage across the genome?
+* How many SVs can be identified, what is their size distribution, and how frequent are the different types of SV?
 * How do the SVs called compare to a reference truthset when accuracy and precision of predictions are considered?
 
 The tutorial workflow uses a  configuration file, **`config.yaml`**, that specifies the DNA sequences to use, the reference genome and analysis characteristics. This file can be modified to run the workflow using different DNA sequence collections, alternative reference genomes, and with parameters tuned to the needs of SV discovery. 
@@ -22,6 +22,8 @@ The tutorial workflow uses a  configuration file, **`config.yaml`**, that specif
 
 ## Methods utilised include: 
 
+A number of different bioinformatics software packages will be used to analyse the provided DNA sequence data. The workflow used in the tutorial applies the [pipeline-structural-variation](https://github.com/nanoporetech/pipeline-structural-variation). The key software packages used include
+
 * **`conda`** for management of bioinformatics software installations
 * **`snakemake`** for managing the bioinformatics workflow
 * **`minimap2`** for mapping sequence reads to reference genome
@@ -32,13 +34,13 @@ The tutorial workflow uses a  configuration file, **`config.yaml`**, that specif
 
 ## The computational requirements include: 
 
-* Computer running Linux (Centos7, Ubuntu 18_10, Fedora 29, macOS)
+* Computer running Linux (Centos7, Ubuntu 18_10, Fedora 29)
 * Multiple CPU cores are ideal; a 4 core CPU at minimum would be recommended 
 * At least 24 Gb RAM - this is sufficient for mapping against the human genome and can report a full MinION flowcell worth of sequence data. The packaged dataset uses just human chromosome 4 and 8Gb RAM is sufficient
 * At least 25 Gb spare disk space for analysis and data files; using a complete 30X human dataset would require approximately 500 Gb of available storage space.
-* Runtime with provided example data - approximately 1 hour (assuming a recent 4 core processor and sufficient RAM)
+* Runtime with provided example data - approximately 1 hour (assuming a recent 4 core processor with sufficient RAM)
 
-\pagebreak
+
 
 # Software installation
 
@@ -58,12 +60,18 @@ The tutorial workflow uses a  configuration file, **`config.yaml`**, that specif
 ```
     cd ont_tutorial_sv
 ```
-4. The Conda software dependencies are managed directly by the **`snakemake`** software that will be introduced in the following sections.
-
+4. Install Conda software dependencies
+```
+    conda env create --name ont_tutorial_sv --file environment.yaml
+```
+5. Initialise the Conda environment
+```
+    conda activate ont_tutorial_sv
+```
 
 # Introduction
 
-Structural variation is a type of genetic variation. Structural variation (SV) has traditionally been challenging to analyse but Oxford Nanopore long sequence reads provide new opportunities for the discovery and characterisation of SV. Longer sequence reads map faithfully to the reference genome and broken mapping segments can be used to discover insertions, deletions and duplications [reference to Sniffles manuscript].
+Structural variation (SV) is a type of genetic variation. SV has traditionally been challenging to analyse but Oxford Nanopore long sequence reads provide new opportunities for the discovery and characterisation of SV. Longer sequence reads map faithfully to the reference genome and broken mapping segments can be used to discover insertions, deletions and duplications (sniffles2018).
 
 This tutorial demonstrates a workflow for the analysis and exploration of SVs. The tutorial is provided with publicly available Nanopore sequence data from human chromosome 4 and a human chromosome 4 sequence reference suitable for the benchmarking of SV discovery.
 
@@ -86,17 +94,18 @@ The workflow contained within this Tutorial performs an authentic bioinformatics
 
 There are few dependencies that need to be installed at the system level prior to running the tutorial. The **`conda`** package management software will coordinate the installation of the required bioinformatics software and their dependencies in user space - this is dependent on a robust internet connection.
 
-As a best practice this tutorial will separate primary DNA sequence data (the base-called fastq files) from the **`Rmarkdown`** source and the genome reference data. The analysis results and figures will again be placed in a separate working directory. The required layout for the primary data is shown in the figure below. This minimal structure will be prepared over the next few sections of this tutorial. The DNA sequences and mapping BED file must be placed within a folder called **`RawData`** and the reference genome and annotation files must be placed in a folder named **`ReferenceData`**. All results will be placed in a folder named **`Analysis`** and different sub-folders will be created for different steps in the workflow. The **`Static`** folder contains accessory methods, texts, bibliography and graphics. The **`pipeline-structural-variation`** folder is a local copy of the [Oxford Nanopore pipeline-structural-variation ](https://github.com/nanoporetech/pipeline-structural-variation) github project.
+As a best practice this tutorial will separate primary DNA sequence data (the base-called fastq files) from the **`Rmarkdown`** source and the genome reference data. The analysis results and figures will again be placed in a separate working directory. The required layout for the primary data is shown in the figure below.
 
+![](Static/Images/SVFolderLayout.png) 
 
-![](Static/Images/FolderLayout.png) 
+This minimal structure will be prepared over the next few sections of this tutorial. The fastq format DNA sequences must be placed within a folder called **`RawData`** and the reference genome must be placed in the folder named **`ReferenceData`**. All results will be placed in the folder named **`Analysis`** and different sub-folders will be created for different steps in the workflow. The **`Static`** folder contains accessory methods, texts, bibliography and graphics. The **`pipeline-structural-variation`** folder is a local copy of the [pipeline-structural-variation ](https://github.com/nanoporetech/pipeline-structural-variation) github project. The **`...`** means that there are other files in the folder not shown in the figure.
+
 
 # Experimental setup
 
-The first required step for running a structural variation discovery workflow is to define the experimental design. The design is configured within a YAML format file (**`config.yaml`**). The tutorial's file is shown in the figure below.
+The first required step for running a structural variation discovery workflow is to define the experimental design. The design is configured within a YAML format file (**`config.yaml`**). The YAML file for the tutorial is shown in the figure below.
 
-
-![](Static/Images/ExperimentalDesign.png) 
+![](Static/Images/SVExperimentalDesign.png) 
 
 There are several critical parameters that should be appropriately specified
 
@@ -104,8 +113,9 @@ There are several critical parameters that should be appropriately specified
 * **`reference_fasta`** specifies the path to the **fasta** format reference genome to use. This sequence may be compressed using **`gzip`**
 * **`sample_name`** This is a name for the analysis - multiple runs can be stored under the **`Analysis`** folder
 * **`biocGenome`** is used to instruct the R/Bioconductor software which version of a genome is to be used for the analysis
-* **`GeneIdMappings`**
-* **`GenomeAnnotation`**
+* **`GeneIdMappings`** is the name of a Bioconductor package that provides the mappings of gene names for the reference genome used
+* **`GenomeAnnotation`** is the name of a Bioconductor package containing the gene annotation for the reference genome used
+* **`RepeatDB`** is a URL link to an appropriate **`RepeatMasker`** database of genomic repeats
 
 Other parameters may be used to tune the workflow characteristics and reported content
 
@@ -126,21 +136,20 @@ This SV discovery tutorial uses **`snakemake`** (@snakemake2012). Snakemake is a
 The **`snakemake`** workflow will call methods that include **`minimap2`** @minimap22018, **`samtools`** @samtools2009, **`Sniffles`** @sniffles2018 and **`pipeline-structural-variation`**. The defined workflow is summarised in the figure below. 
 
 <!-- [^Comment]: # (DAG can be produced with the command = 
-snakemake --snakefile ./pipeline-structural-variation/Snakefile --configfile ./config.yaml  --forceall --dag call | grep -v target.bed | grep -v Working | dot -Tpng > structural_variation_workflow.png)
+snakemake --snakefile ./pipeline-structural-variation/Snakefile --configfile ./config.yaml  --forceall --dag eval | grep -v target.bed | grep -v Working | dot -Tpng > structural_variation_workflow.png)
 --> 
-
 
 ![](Static/Images/structural_variation_workflow.png) 
 
-The precise commands within the **`Snakefile`** include
+The commands within the **`Snakefile`** workflow illustrated above include
 
-* index the reference genome sequence using **``minimap2`**
+* index the reference genome sequence using **`minimap2`**
 * map DNA sequence reads against the reference genome index using **`minimap2`** - prepare a sorted and indexed BAM file of sequence results
-* use the **`sniffles`** software to identify SVs
+* use **`sniffles`** software to identify SVs
 * define BED coordinates from the mapped genome and calculate depth-of-coverage across the mapped regions
 * filter the called SVs using both mapping coordinate information and depth-of-coverage information to produce a high-confidence set of SVs.
-* **`GIAB`** truthset data will be downloaded; truthset variants that intersect with the experimental data will be identified
-* **`Truvari`** will be used to assess performance of identified variants against the truthset
+* **`GIAB`** truthset data is downloaded; truthset variants that intersect with the experimental data will be identified
+* **`Truvari`** script will be downloaded and used to assess performance of identified variants against the truthset
 
 
 # Run the snakemake workflow file
@@ -152,9 +161,11 @@ The precise commands within the **`Snakefile`** include
 ```
 # snakemake is used to run the workflow
 
-snakemake --snakefile ./pipeline-structural-variation/Snakefile --configfile ./config.yaml --jobs 8 eval
+snakemake --snakefile ./pipeline-structural-variation/Snakefile --configfile ./config.yaml --jobs 4 eval
 ```
 \fontsize{10}{14}
+
+The **`--jobs 4`** instructs the Snakemake workflow to use 4 CPU cores. Please adjust this value to best match the computer resources available. 
 
 The **`eval`** task specifies that the analysis is performed and the results are compared to the GIAB truthset. If you are not using the dataset packaged with the tutorial (or other GM24385 dataset) then the workflow can be run with the **`call`** suffix instead. This will map reads and prepare a high-confidence set of SVs; the benchmarking will not be performed.
 
@@ -171,4 +182,4 @@ R --slave -e 'rmarkdown::render("ont_tutorial_sv.Rmd", "html_document")'
 ```
 \fontsize{10}{14}
 
-This will prepare an HTML format document called **`ont_tutorial_sv.html`** that, depending of modifications to the **`config.yaml`** file will closely resemble this tutorial vignette.
+This will prepare an HTML format document called **`ont_tutorial_sv.html`**.

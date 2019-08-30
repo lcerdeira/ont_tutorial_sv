@@ -35,3 +35,6 @@ tutorialText: True
 biocGenome: "hg19"
 GeneIdMappings: "org.Hs.eg.db"
 GenomeAnnotation: "TxDb.Hsapiens.UCSC.hg19.knownGene"
+RepeatDB: "http://www.repeatmasker.org/genomes/hg19/RepeatMasker-rm405-db20140131/hg19.fa.out.gz"
+
+
