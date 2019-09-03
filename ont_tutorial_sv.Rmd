@@ -401,17 +401,17 @@ The Integrative Genomics Viewer (**`IGV`**) is a tool (@10.1093/bib/bbs017, @Rob
 
 The figure above presents a screenshot from the **`IGV`** software. This has been selected as a 1.5kb insertion from the filtered high-quality SVs. In the centre region of the viewer the insertion event is displayed. The blue and pink shading reveals that reads are mapping to both the forward and reverse strands of the reference DNA - the insertion is observed across all reads and is therefore a probable homozygous insertion.
 
-IGV can also view deletions - the figure below shows what could be a 68 bp heterozygous deletion. There is a reasonable amount of read support for this deletion and the deletion appears to have been sampled from both DNA sequence strands.
+IGV can also view deletions - the figure below shows what could be a 130 bp homozygous deletion. There is read support for this deletion and the deletion has been sampled from both DNA sequence strands.
 
-![](Static/Images/SV_heterozygous_deletion.PNG)
+![](Static/Images/SV_homozygous_deletion.PNG)
 
 **`IGV`** can be started from the command line by using the command `igv`.
 
-We would like to explore the read mapping information around the SV located within the **MUC7** gene. The command below will open the **`IGV`** browser to the appropriate genome coordinates - in this example we are using the feature with coordinates `[Chr 4] Start=71346143, Stop=71348210` - this corresponds to a region 1kb up- and down-stream on the annotated deletion within the **`CRIPAK`** gene - this should look much the heterozygous deletion figure shown above.
+We would like to explore the read mapping information around the SV located within the **MUC7** gene. The command below will open the **`IGV`** browser to the appropriate genome coordinates - in this example we are using the feature with coordinates `[Chr 4] Start=1387837, Stop=1389955` - this corresponds to a region 1kb up- and down-stream on the annotated deletion within the **`CRIPAK`** gene - this should look much the heterozygous deletion figure shown above.
 
 
 ```
-igv -g ./ReferenceData/human_g1k_v37_chr4.fasta ./Analysis/GM24385.nf7.chr4/alignment/GM24385.nf7.chr4_minimap2.bam 4:71346143-71348210
+igv -g ./ReferenceData/human_g1k_v37_chr4.fasta ./Analysis/GM24385.nf7.chr4_a/alignment/GM24385.nf7.chr4_a_minimap2.bam 4:1387837-1389955
 ```
 
 
