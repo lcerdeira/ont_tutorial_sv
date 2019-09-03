@@ -126,20 +126,22 @@ The **`minimap2`** software has been used to map the fastq format sequence reads
 The mapping results from the BAM file have been collated and are summarised below. 
 
 
-```{r mappingExecutiveSummary, echo=FALSE, message=FALSE}
+```{r mappingExecutiveSummaryLoad, echo=FALSE, message=FALSE, results='hide'}
 bamSummary <- bamSummarise(bamFile)
 primaryBAM <- bamSummary[which(bamSummary$readFlag=="Primary"),]
 
 infographicFile <- infoGraphicPlot4(identifier="mappingSummary", 
                  panelA=c(key="Primary Alignments", value=scales::comma_format()(nrow(primaryBAM)), icon="fa-sliders"), 
                  panelB=c(key="Mapping Yield", value=gdata::humanReadable(sum(primaryBAM$end - primaryBAM$start), standard="SI"), icon="fa-calculator"), 
-                 panelC=c(key="Average Accuracy", value=paste0(round(mean(primaryBAM$accuracy)*100,digits=1),"%"), icon="fa-area-chart"), 
-                 panelD=c(key="Average Identity", value=paste0(round(mean(primaryBAM$identity)*100,digits=1),"%"), icon="fa-info"))
+                 panelC=c(key="Mean mapping accuracy", value=paste0(round(mean(primaryBAM$accuracy)*100,digits=1),"%"), icon="fa-area-chart"), 
+                 panelD=c(key="Mean mapping identity", value=paste0(round(mean(primaryBAM$identity)*100,digits=1),"%"), icon="fa-info"))
+```
 
+```{r mappingExecutiveSummary, echo=FALSE}
  knitr::include_graphics(infographicFile)
 ```
 
-The summary plot above presents key observations from the review of the sequence mapping results. These results highlighted include the number of primary sequence alignments (there will also be other mapping results as either secondary or supplementary mappings that are summarised in a table below), the mapping yield that describes that number of DNA sequence bases that are mapped (primary mapped results only) and the measure of mean accuracy and identity across the primary mapped reads. Accuracy describes the number of correctly mapped sequences bases relative to the reference genome and considers mismatches and INDELs. Identity is similar to accuracy but ignores INDELs. Please note that this is a review of mapping quality - not raw sequence accuracy.
+The summary plot above presents key observations from the review of the sequence mapping results. These results highlighted include the number of primary sequence alignments (there will also be other mapping results as either secondary or supplementary mappings that are summarised in a table below), the mapping yield that describes that number of DNA sequence bases that are mapped (primary mapped results only) and the measure of mean accuracy and identity across the primary mapped reads. Mapping accuracy describes the number of correctly mapped sequences bases relative to the reference genome and considers mismatches and INDELs. Mapping identity is similar to accuracy but ignores INDELs.
 
 
 ## Assessment of mapping quality and identity
@@ -256,7 +258,7 @@ print(karyogram)
 The figure above shows a karyogram shaded with the location of structural variants shaded by insertion, deletion and duplication types. 
 
 
-# Genomic placement of SVs in annotated genome.
+# Identification of annotated genes that overlap SVs
 
 SVs can be seen to be distributed across the reference genome used for the analysis; and do not appear to be clustered around any specific chromosomal location. It is useful to look for the subset of structural variations that overlap with the annotated genes. 
 
