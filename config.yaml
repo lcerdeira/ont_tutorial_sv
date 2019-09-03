@@ -18,7 +18,9 @@ min_read_mapping_quality: 20
 # Minimum read support required to call a SV (auto for auto-detect)
 min_read_support: 'auto'
 # Sample name
-sample_name: "GM24385.nf7.chr4_b"
+sample_name: "GM24385.nf7.chr4_a"
+# threads to use - depends on compute resource
+threads: 20
 
 #################################
 ## General pipeline parameters ##
