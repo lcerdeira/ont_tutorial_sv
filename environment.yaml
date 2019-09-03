@@ -30,4 +30,4 @@ dependencies:
     - imagemagick
     - graphviz
     - pandoc
-
+    - igv
