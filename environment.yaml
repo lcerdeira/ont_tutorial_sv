@@ -2,7 +2,6 @@ channels:
     - bioconda
     - conda-forge
     - r
-    - sagrudd
 dependencies:
     - snakemake
     - minimap2
@@ -12,6 +11,7 @@ dependencies:
     - nanoplot
     - pybedtools
     - bedtools
+    - bcftools
     - pysam
     - scipy
     - tqdm
@@ -26,8 +26,8 @@ dependencies:
     - intervaltree==2.1.0
     - rtg-tools
     - r
+    - r-nanopore
     - imagemagick
-    - rstudio
     - graphviz
-    - ont_tutorial_cas9 
+    - pandoc
 

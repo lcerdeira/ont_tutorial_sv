@@ -40,11 +40,10 @@ knitr::opts_chunk$set(tidy=TRUE, tidy.opts=list(width.cutoff=80),
 options(knitr.kable.NA = '')
 
 library(yaml)
-library(session)
 library(kableExtra)
 library(scales) # required for comma
 library(dplyr)
-library(nanopoRe) # devtools::install_github("sagrudd/nanopoRe") # unloadNamespace("nanopoRe")
+library(nanopoRe) # devtools::install_github("sagrudd/nanopoRe") 
 library(emojifont)
 library(vcfR)
 library(VariantAnnotation)
@@ -249,7 +248,7 @@ The size distribution of different SV types can also be plotted as a histogram. 
 
 ```{r karyogram, echo=FALSE, warning=FALSE, message=FALSE}
 
-nul <- capture.output(karyogram <- snifflesKaryogram(vcfFile))
+suppressWarnings(nul <- capture.output(karyogram <- snifflesKaryogram(vcfFile)))
 print(karyogram)
 
 ```
@@ -346,8 +345,8 @@ realDF <- as.data.frame(table(real$repeatClass))
 
 repeatResults <- realDF[order(realDF$Freq, decreasing=TRUE),][1:15,]
 
+suppressWarnings(
 x <- lapply(repeatResults$Var1, function(x) {
-  
   svtargets <- to(findOverlaps(real[which(real$repeatClass == x),], SV, ignore.strand=TRUE))
   repeatSV <- SV[unique(svtargets),]
   return(c(length(unique(svtargets)), 
@@ -355,9 +354,10 @@ x <- lapply(repeatResults$Var1, function(x) {
            length(which(repeatSV$SVTYPE=="INS")), 
           length(which(repeatSV$SVTYPE=="DUP"))))
 } )
+)
 repeatResults <- cbind(repeatResults, t(as.data.frame(x)))
 
-xlsx_repeats <- data.frame(cbind(as.data.frame(real), mcols(SV[subjectHits(overlaps),])[,c("SVTYPE","SVLEN","RE","SU")]))
+xlsx_repeats <- data.frame(cbind(data.frame(real), mcols(SV[subjectHits(overlaps),])[,c("SVTYPE","SVLEN","RE","SU")]))
 write_xlsx(xlsx_repeats, path = file.path(getRpath(), "sv_repeats_overlap.xlsx"))
 ```
 
@@ -430,7 +430,7 @@ The image above shows a screenshot from the **`Ribbon`** software presenting the
 
 # Reproducible research - produce your own report
 
-This report has been created using **`Rmarkdown`**, publicly available **`R`** packages, and the \LaTeX document typesetting software for reproducibility. For clarity the **`R`** packages used, and their versions, are listed below.
+This report has been created using **`Rmarkdown`** with publicly available **`R`** packages. For clarity the **`R`** packages used, and their versions, are listed below.
 
 \fontsize{8}{12}
 

@@ -2,16 +2,7 @@
 
 # Customise the tutorial template
 
-The **`R`** code to prepare your own report is included in the distributed **`Rmarkdown`** file. The **`Rmarkdown`** file can be loaded, viewed, and edited in the **`RStudio`** software. Within your **`conda`** environment (and within your tutorial folder), simply type
-
-\fontsize{8}{12}
-```
-rstudio ont_tutorial_sv.Rmd
-```
-\fontsize{10}{14}
-
-
-
+The **`R`** code to prepare your own report is included in the distributed **`Rmarkdown`** file. The **`Rmarkdown`** file can be loaded, viewed, and edited using the **`RStudio`** software. 
 
 **Final thoughts.** Behind this **`Rmarkdown`** file is a modest amount of **`R code`** - please explore the **`Rmarkdown`** template; modify it and run with your own samples.
 
