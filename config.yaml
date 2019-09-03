@@ -4,7 +4,7 @@
 # pass an appropriate path to the input-files (the ../ prefix is sufficient for this demo)
 
 # FASTQ file or folder containing FASTQ files
-input_fastq: "../RawData/GM24385_nf7_chr4.fastq.gz"
+input_fastq: "../RawData/GM24385_nf7_chr4_a.fastq.gz"
 # FASTA file containing the reference genome
 reference_fasta: "../ReferenceData/human_g1k_v37_chr4.fasta"
 # Minimum SV length

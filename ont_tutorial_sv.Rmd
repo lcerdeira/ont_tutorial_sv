@@ -407,7 +407,7 @@ IGV can also view deletions - the figure below shows what could be a 68 bp heter
 
 **`IGV`** can be started from the command line by using the command `igv`.
 
-We would like to explore the read mapping information around the SV located within the **MUC7** gene. The command below will open the **`IGV`** browser to the appropriate genome coordinates - in this example we are using the feature with coordinates `[Chr 4] Start=71346143, Stop=71348210` - this corresponds to a region 1kb up- and down-stream on the annotated deletion within the **`MUC7`** gene - this should look much the heterozygous deletion figure shown above.
+We would like to explore the read mapping information around the SV located within the **MUC7** gene. The command below will open the **`IGV`** browser to the appropriate genome coordinates - in this example we are using the feature with coordinates `[Chr 4] Start=71346143, Stop=71348210` - this corresponds to a region 1kb up- and down-stream on the annotated deletion within the **`CRIPAK`** gene - this should look much the heterozygous deletion figure shown above.
 
 
 ```

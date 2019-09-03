@@ -3,7 +3,7 @@ channels:
     - conda-forge
     - r
 dependencies:
-    - snakemake
+    - snakemake-minimal
     - minimap2
     - sniffles
     - samtools

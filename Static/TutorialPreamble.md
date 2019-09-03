@@ -54,7 +54,7 @@ A number of different bioinformatics software packages will be used to analyse t
 ```
     conda install -c conda-forge git-lfs
     git lfs install
-    git clone https://github.com/nanoporetech/ont_tutorial_sv.git ont_tutorial_sv
+    git clone --recursive https://github.com/nanoporetech/ont_tutorial_sv.git ont_tutorial_sv
 ```
 3. Change your working directory into the new `ont_tutorial_sv` folder 
 ```
