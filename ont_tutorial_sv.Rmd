@@ -447,7 +447,7 @@ It is also worth recording the versions of the software that have been used for 
 \fontsize{8}{12}
 
 ```{r, engine='bash', echo=FALSE, comment=NA}
-conda list "samtools|minimap2|sniffles|snakemake|rstudio"
+conda list "samtools|minimap2|sniffles|snakemake|rstudio|bedtools|bcf|vcf|mosdepth"
 ```
 
 \fontsize{10}{14}
