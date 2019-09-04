@@ -83,6 +83,8 @@ library(eval(config$GeneIdMappings), character.only=TRUE)
 if (!config$GenomeAnnotation %in% installed.packages()[, "Package"]) {BiocManager::install(config$GenomeAnnotation)}
 library(eval(config$GenomeAnnotation), character.only=TRUE)
 eval(parse(text=paste0("txdb <- ",config$GenomeAnnotation)))
+
+demoChr <- "20"
 ```
 
 
@@ -249,8 +251,7 @@ print(svdist)
 The size distribution of different SV types can also be plotted as a histogram. In the figure above, the frequency of different sized SVs is plotted. Please note that the length of the SV has been plotted using a log10 scale.
 
 ```{r karyogram, echo=FALSE, warning=FALSE, message=FALSE}
-
-suppressWarnings(nul <- capture.output(karyogram <- snifflesKaryogram(vcfFile)))
+suppressWarnings(nul <- capture.output(karyogram <- snifflesKaryogram(vcfFile, demoChr=demoChr)))
 print(karyogram)
 
 ```
@@ -269,6 +270,12 @@ vcf <- trim(vcf)
 
 seqlevels(vcf) <- paste0("chr",seqlevels(vcf))
 seqlevels(vcf, pruning.mode="coarse") <- seqlevels(vcf)[which(seqlevels(vcf) %in% seqlevels(txdb))]
+
+# ugly - but tutorial demo data code allowing for a fraction of a chromosome for presentation purposes
+demoChr <- paste0("chr", demoChr)
+if (length(seqlevels(vcf))==1 && names(seqlengths(vcf))==demoChr) {
+    seqlengths(vcf)[[demoChr]] <- seqlengths(txdb)[[demoChr]]
+}
 
 suppressWarnings(variantsGR <- locateVariants(rowRanges(vcf), txdb, AllVariants()))
 # filter on some key columns; remove e.g. the TXID and CDSID that lead to duplicates ...
@@ -403,17 +410,20 @@ The Integrative Genomics Viewer (**`IGV`**) is a tool (@10.1093/bib/bbs017, @Rob
 
 The figure above presents a screenshot from the **`IGV`** software. This has been selected as a 1.5kb insertion from the filtered high-quality SVs. In the centre region of the viewer the insertion event is displayed. The blue and pink shading reveals that reads are mapping to both the forward and reverse strands of the reference DNA - the insertion is observed across all reads and is therefore a probable homozygous insertion.
 
-IGV can also view deletions - the figure below shows what could be a 130 bp homozygous deletion. There is read support for this deletion and the deletion has been sampled from both DNA sequence strands.
+IGV can also view deletions - the figure below shows what could be a 182 bp heterozygous deletion. There is good read support for this deletion and the deletion has been sampled from both DNA sequence strands.
 
-![](Static/Images/SV_homozygous_deletion.PNG)
+![](Static/Images/IGV_heterozygous_deletion_chr20.PNG)
 
 **`IGV`** can be started from the command line by using the command `igv`.
 
-We would like to explore the read mapping information around the SV located within the **MUC7** gene. The command below will open the **`IGV`** browser to the appropriate genome coordinates - in this example we are using the feature with coordinates `[Chr 4] Start=1387837, Stop=1389955` - this corresponds to a region 1kb up- and down-stream on the annotated deletion within the **`CRIPAK`** gene - this should look much the heterozygous deletion figure shown above.
+We would like to explore the read mapping information around the SV located within the **SEMG1** gene identified earlier in the tutorial document. The command below will open the **`IGV`** browser to the appropriate genome coordinates - in this example we are using the feature with coordinates `[Chr 20] Start=43835839, Stop=43838021` - this corresponds to a region 1kb up- and down-stream on the annotated deletion within the **`SEMG1`** gene - the plot displayed should look much the  deletion figure shown above.
 
 
 ```
-igv -g ./ReferenceData/human_g1k_v37_chr4.fasta ./Analysis/GM24385.nf7.chr4_a/alignment/GM24385.nf7.chr4_a_minimap2.bam 4:1387837-1389955
+igv -g ./ReferenceData/human_g1k_v37_chr20_50M.fasta \
+    ./Analysis/GM24385.nf7.chr20_af/alignment/GM24385.nf7.chr20_af_minimap2.bam \
+    20:43835839-43838021
+
 ```
 
 

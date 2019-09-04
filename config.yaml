@@ -4,9 +4,9 @@
 # pass an appropriate path to the input-files (the ../ prefix is sufficient for this demo)
 
 # FASTQ file or folder containing FASTQ files
-input_fastq: "../RawData/GM24385_nf7_chr4_a.fastq.gz"
+input_fastq: "../RawData/GM24385_nf7_chr20_af.fastq.gz"
 # FASTA file containing the reference genome
-reference_fasta: "../ReferenceData/human_g1k_v37_chr4.fasta"
+reference_fasta: "../ReferenceData/human_g1k_v37_chr20_50M.fasta"
 # Minimum SV length
 min_sv_length: 40
 # Maximum SV length
@@ -18,7 +18,7 @@ min_read_mapping_quality: 20
 # Minimum read support required to call a SV (auto for auto-detect)
 min_read_support: 'auto'
 # Sample name
-sample_name: "GM24385.nf7.chr4_a"
+sample_name: "GM24385.nf7.chr20_af"
 # threads to use - depends on compute resource
 threads: 20
 
