@@ -405,21 +405,21 @@ infographicFile3 <- infoGraphicPlot3(identifier="truthset_validation",
 
 The Integrative Genomics Viewer (**`IGV`**) is a tool (@10.1093/bib/bbs017, @Robinsone31), that has been installed by **`conda`**, for the visualisation of genomics data. The software provides functionality for the display of sequence mapping data from BAM files that can subsequently be overlaid with "tracks" of information that can include depth-of-coverage for mapping data and gene annotations. 
 
-![](Static/Images/SV_homozygous_insertion.PNG)
+![](Static/Images/IGV_homozygous_insertion_chr20.PNG)
 
-The figure above presents a screenshot from the **`IGV`** software. This has been selected as a 1.5kb insertion from the filtered high-quality SVs. In the centre region of the viewer the insertion event is displayed. The blue and pink shading reveals that reads are mapping to both the forward and reverse strands of the reference DNA - the insertion is observed across all reads and is therefore a probable homozygous insertion.
+The figure above presents a screenshot from the **`IGV`** software. This presents a 610 nucleotide insertion that is present in the filtered high-quality SVs. In the centre region of the viewer the insertion event is displayed. The blue and pink shading reveals that reads are mapping to both the forward and reverse strands of the reference DNA - the insertion is observed across all reads and is therefore a probable homozygous insertion. This SV has been characterised as overlapping the promoter region of the EDEM2 gene.
 
-IGV can also view deletions - the figure below shows what could be a 182 bp heterozygous deletion. There is good read support for this deletion and the deletion has been sampled from both DNA sequence strands.
+IGV can also view deletions - the figure below shows a candidate 182 bp heterozygous deletion. There is good read support for this deletion and it has also been sampled from both DNA sequence strands.
 
 ![](Static/Images/IGV_heterozygous_deletion_chr20.PNG)
 
 **`IGV`** can be started from the command line by using the command `igv`.
 
-We would like to explore the read mapping information around the SV located within the **SEMG1** gene identified earlier in the tutorial document. The command below will open the **`IGV`** browser to the appropriate genome coordinates - in this example we are using the feature with coordinates `[Chr 20] Start=43835839, Stop=43838021` - this corresponds to a region 1kb up- and down-stream on the annotated deletion within the **`SEMG1`** gene - the plot displayed should look much the  deletion figure shown above.
+We would like to explore the read mapping information around the SV located within the **SEMG1** gene identified earlier in the tutorial document. The command below will open the **`IGV`** browser to the appropriate genome coordinates - in this example we are using the feature with coordinates `[Chr 20] Start=43835839, Stop=43838021` - this corresponds to a region 1kb up- and down-stream on the annotated deletion within the **`SEMG1`** gene - the plot displayed should look much the  deletion figure shown above. The **`-o prefs.properties`** option loads a file that configures the **`IGV`** software. This masks small INDELs and shades the sequence reads by strand. 
 
 
 ```
-igv -g ./ReferenceData/human_g1k_v37_chr20_50M.fasta \
+igv -o ./Static/prefs.properties -g ./ReferenceData/human_g1k_v37_chr20_50M.fasta \
     ./Analysis/GM24385.nf7.chr20_af/alignment/GM24385.nf7.chr20_af_minimap2.bam \
     20:43835839-43838021
 
