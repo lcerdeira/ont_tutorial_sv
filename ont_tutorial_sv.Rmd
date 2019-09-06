@@ -407,7 +407,7 @@ The Integrative Genomics Viewer (**`IGV`**) is a tool (@10.1093/bib/bbs017, @Rob
 
 ![](Static/Images/IGV_homozygous_insertion_chr20.PNG)
 
-The figure above presents a screenshot from the **`IGV`** software. This presents a 610 nucleotide insertion that is present in the filtered high-quality SVs. In the centre region of the viewer the insertion event is displayed. The blue and pink shading reveals that reads are mapping to both the forward and reverse strands of the reference DNA - the insertion is observed across all reads and is therefore a probable homozygous insertion. This SV has been characterised as overlapping the promoter region of the EDEM2 gene.
+The figure above presents a screenshot from the **`IGV`** software. This presents a 265 nucleotide insertion that is present in the filtered high-quality SVs. In the centre region of the viewer the insertion event is displayed. The blue and pink shading reveals that reads are mapping to both the forward and reverse strands of the reference DNA - the insertion is observed across all reads and is therefore a probable homozygous insertion.
 
 IGV can also view deletions - the figure below shows a candidate 182 bp heterozygous deletion. There is good read support for this deletion and it has also been sampled from both DNA sequence strands.
 
