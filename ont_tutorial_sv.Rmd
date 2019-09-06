@@ -51,8 +51,7 @@ library(jsonlite)
 library(writexl)
 
 config <- yaml.load_file("config.yaml")
-#tutorialText   <- config$tutorialText
-tutorialText <- TRUE
+tutorialText   <- config$tutorialText
 
 sample_name <- config$sample_name
 input_fastq <- file.path(basename(dirname(config$input_fastq)), basename(config$input_fastq))

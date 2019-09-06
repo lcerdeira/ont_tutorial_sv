@@ -26,8 +26,12 @@ A number of different bioinformatics software packages will be used to analyse t
 
 * **`conda`** for management of bioinformatics software installations
 * **`snakemake`** for managing the bioinformatics workflow
+* **`git`** packages for downloading the tutorial from Github repository
+* **`git-lfs`** is required to download the sequence and metadata files provided with the tutorial
 * **`minimap2`** for mapping sequence reads to reference genome
+* **`samtools`** is used to handle the `sam` and `bam` format mapping data
 * **`sniffles`** for structural variation calling
+* **`R`** is a statistical analysis software and is used for the analysis and reporting of the sequence summary data
 * **`RSamtools`** and **`GenomicAlignments`**; R software for parsing BAM files
 * **`IGV`** for visualising mapping characteristics at specific genomic regions
 * **`Ribbon`** is a web-application for the presentation of structural variation data
@@ -36,7 +40,7 @@ A number of different bioinformatics software packages will be used to analyse t
 
 * Computer running Linux (Centos7, Ubuntu 18_10, Fedora 29)
 * Multiple CPU cores are ideal; a 4 core CPU at minimum would be recommended 
-* At least 24 Gb RAM - this is sufficient for mapping against the human genome and can report a full MinION flowcell worth of sequence data. The packaged dataset uses just human chromosome 4 and 8Gb RAM is sufficient
+* At least 24 Gb RAM - this is sufficient for mapping against the human genome and can report a full MinION flowcell worth of sequence data. The packaged dataset uses a region of human chromosome 20 and 8Gb RAM is sufficient
 * At least 25 Gb spare disk space for analysis and data files; using a complete 30X human dataset would require approximately 500 Gb of available storage space.
 * Runtime with provided example data - approximately 1 hour (assuming a recent 4 core processor with sufficient RAM)
 
@@ -44,7 +48,7 @@ A number of different bioinformatics software packages will be used to analyse t
 
 # Software installation
 
-1. Most software dependencies are managed though **`conda`**. Install as described at  <br> [https://conda.io/docs/install/quick.html](https://conda.io/docs/install/quick.html). You will need to accept the license agreement during installation and we recommend that you allow the Conda installer to prepend its path to your `.bashrc` file when asked.
+1. Most software dependecies are managed using **`conda`**. Please install as described at  <br> [https://conda.io/projects/conda/en/latest/user-guide/install/index.html](https://conda.io/projects/conda/en/latest/user-guide/install/index.html). You will need to accept the license agreement during installation and we recommend that you allow the Conda installer to prepend its path to your `.bashrc` file when asked.
 ```
     wget https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh
     bash Miniconda3-latest-Linux-x86_64.sh

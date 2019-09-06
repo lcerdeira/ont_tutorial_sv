@@ -33,7 +33,7 @@ repo: "https://github.com/nanoporetech/pipeline-structural-variation.git"
 ##################################
 ## Tutorial specific parameters ##
 ##################################
-tutorialText: True
+tutorialText: FALSE
 biocGenome: "hg19"
 GeneIdMappings: "org.Hs.eg.db"
 GenomeAnnotation: "TxDb.Hsapiens.UCSC.hg19.knownGene"

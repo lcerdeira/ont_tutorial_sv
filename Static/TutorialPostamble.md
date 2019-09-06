@@ -31,5 +31,5 @@ knitr::purl("ont_tutorial_sv.Rmd", quiet=TRUE)
 
 * __Rmarkdown__ is an extension to markdown. Functional R code can be embedded in a plain-text document and subsequently rendered to other formats including the PDF format of this report.
 
-
+* __VCF__ (Variant Call Format) is a standard bioinformatics file format for storing gene sequence variations
 
