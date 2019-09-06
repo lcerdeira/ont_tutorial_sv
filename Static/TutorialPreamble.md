@@ -71,7 +71,7 @@ A number of different bioinformatics software packages will be used to analyse t
 
 # Introduction
 
-Structural variation (SV) is a type of genetic variation. SV has traditionally been challenging to analyse but Oxford Nanopore long sequence reads provide new opportunities for the discovery and characterisation of SV. Longer sequence reads map faithfully to the reference genome and broken mapping segments can be used to discover insertions, deletions and duplications (sniffles2018).
+Structural variation (SV) is a type of genetic variation. SV has traditionally been challenging to analyse but Oxford Nanopore long sequence reads provide new opportunities for the discovery and characterisation of SV. Longer sequence reads map faithfully to the reference genome and broken mapping segments can be used to discover insertions, deletions and duplications (@sniffles2018).
 
 This tutorial demonstrates a workflow for the analysis and exploration of SVs. The tutorial is provided with publicly available Nanopore sequence data from human chromosome 4 and a human chromosome 4 sequence reference suitable for the benchmarking of SV discovery.
 
