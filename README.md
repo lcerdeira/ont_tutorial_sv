@@ -24,6 +24,17 @@ The tutorial is packaged with example data from the [Genome in a Bottle](https:/
 
 # 2. Getting started:
 
+### What are the bioinformatics objectives?
+
+There are five goals for this tutorial:
+
+* To introduce a literate framework for analysing structural variation from Oxford Nanopore DNA sequence data
+* To introduce and utilise best data-management practices to ensure reproducibility
+* To map sequence reads to the reference genome and to discover structural varations using **`pipeline-structural-variation`**, an SV discovery workflow optimised for Oxford Nanopore DNA sequence data
+* To annotate genomic insertion, deletion and duplications against the human reference genome to identify the variants that overlap genes and annotated genome repeat units
+* To benchmark the performance of SV discovery through assessment of precision and recall using a structural variation truthset
+
+
 ### Input and output: 
 
 The tutorial workflow uses a  configuration file, **`config.yaml`**, that specifies the DNA sequences to use, the reference genome and analysis characteristics. This file can be modified to run the workflow using different DNA sequence collections, alternative reference genomes, and with parameters tuned to the needs of SV discovery. 
