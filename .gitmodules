@@ -1,3 +1,0 @@
-[submodule "pipeline-structural-variation"]
-	path = pipeline-structural-variation
-	url = https://github.com/sagrudd/pipeline-structural-variation.git
