@@ -56,6 +56,7 @@ tutorialText   <- config$tutorialText
 sample_name <- config$sample_name
 input_fastq <- file.path(basename(dirname(config$input_fastq)), basename(config$input_fastq))
 reference_fasta <- file.path(basename(dirname(config$reference_fasta)), basename(config$reference_fasta))
+RepeatDB <- config$RepeatDB
 
 ### here lie dragons ###
 # expeditions below this comment at your own risk
@@ -267,7 +268,10 @@ SVs can be seen to be distributed across the reference genome used for the analy
 vcf <- readVcf(file=vcfFile, genome=biocGenome)
 vcf <- trim(vcf)
 
-seqlevels(vcf) <- paste0("chr",seqlevels(vcf))
+# prefix the chromosome names with chr for annotation package alignment
+if (length(grep("chr", seqlevels(vcf)))==0) {
+  seqlevels(vcf) <- paste0("chr",seqlevels(vcf))
+}
 seqlevels(vcf, pruning.mode="coarse") <- seqlevels(vcf)[which(seqlevels(vcf) %in% seqlevels(txdb))]
 
 # ugly - but tutorial demo data code allowing for a fraction of a chromosome for presentation purposes
@@ -285,7 +289,13 @@ vcfMeta <- Vcf2GRanges(vcfFile)
 genic <- data.frame(variants[which(variants$LOCATION == "coding"),])
 genic$SVTYPE <- as.character(vcfMeta[genic$QUERYID,]$SVTYPE)
 genic$SVLEN <- as.character(vcfMeta[genic$QUERYID,]$SVLEN)
-genic$SYMBOL <- as.character(mapIds(org.Hs.eg.db, keys=genic$GENEID, column="SYMBOL", keytype="ENTREZID"))
+
+SYMBOL <- c()
+if (nrow(genic) > 0) {
+  SYMBOL <- as.character(mapIds(org.Hs.eg.db, keys=genic$GENEID, column="SYMBOL", keytype="ENTREZID"))
+}
+
+genic$SYMBOL <- SYMBOL
 genic$start <- as.character(start(vcfMeta[genic$QUERYID,]))
 genic$end <- as.character(end(vcfMeta[genic$QUERYID,]))
 
@@ -318,20 +328,26 @@ The **coding** SVs identified in the table above, overlap with annotated gene ex
 
 ```{r codingRegions, echo=FALSE, message=FALSE, warning=FALSE}
 
-genes       <- sort(unique(genic[which(genic$SYMBOL!="NULL"),"SYMBOL"]))
-deletions   <- unlist(lapply(genes, function(x) { length(which(genic[which(genic$SYMBOL==x),"SVTYPE"]=="DEL")) }))
-insertions  <- unlist(lapply(genes, function(x) { length(which(genic[which(genic$SYMBOL==x),"SVTYPE"]=="INS")) }))
-duplications<- unlist(lapply(genes, function(x) { length(which(genic[which(genic$SYMBOL==x),"SVTYPE"]=="DUP")) }))
-vsizes      <- unlist(lapply(genes, function(x) { round(mean(as.integer(genic[which(genic$SYMBOL==x),"SVLEN"]))) }))
-chromosome  <- unlist(lapply(genes, function(x) { unique(as.character(genic[which(genic$SYMBOL==x),"seqnames"])) }))
-start       <- unlist(lapply(genes, function(x) { unique(as.character(genic[which(genic$SYMBOL==x),"start"])) }))
-end         <- unlist(lapply(genes, function(x) { unique(as.character(genic[which(genic$SYMBOL==x),"end"])) }))
+if (nrow(genic) > 0) {
 
-geneAssociation <- cbind(genes, chromosome, start, end, deletions, insertions, duplications, vsizes)
-geneAssociation[geneAssociation=="0"] <- " "
+  genes       <- sort(unique(genic[which(genic$SYMBOL!="NULL"),"SYMBOL"]))
+  deletions   <- unlist(lapply(genes, function(x) { length(which(genic[which(genic$SYMBOL==x),"SVTYPE"]=="DEL")) }))
+  insertions  <- unlist(lapply(genes, function(x) { length(which(genic[which(genic$SYMBOL==x),"SVTYPE"]=="INS")) }))
+  duplications<- unlist(lapply(genes, function(x) { length(which(genic[which(genic$SYMBOL==x),"SVTYPE"]=="DUP")) }))
+  vsizes      <- unlist(lapply(genes, function(x) { round(mean(as.integer(genic[which(genic$SYMBOL==x),"SVLEN"]))) }))
+  chromosome  <- unlist(lapply(genes, function(x) { unique(as.character(genic[which(genic$SYMBOL==x),"seqnames"])) }))
+  start       <- unlist(lapply(genes, function(x) { unique(as.character(genic[which(genic$SYMBOL==x),"start"])) }))
+  end         <- unlist(lapply(genes, function(x) { unique(as.character(genic[which(genic$SYMBOL==x),"end"])) }))
+  
+  geneAssociation <- cbind(genes, chromosome, start, end, deletions, insertions, duplications, vsizes)
+  geneAssociation[geneAssociation=="0"] <- " "
+  
+  
+  kable(geneAssociation, format="html", col.names=c("GeneId", "Chromosome", "Start", "End", "Deletions", "Insertions", "Duplications", "Mean variant size"), caption="Table listing genes containing SVs, the SV type and SV size", booktabs=TRUE, table.envir='table*', linesep="") %>% kable_styling(c("striped", "condensed"))
 
-
-kable(geneAssociation, format="html", col.names=c("GeneId", "Chromosome", "Start", "End", "Deletions", "Insertions", "Duplications", "Mean variant size"), caption="Table listing genes containing SVs, the SV type and SV size", booktabs=TRUE, table.envir='table*', linesep="") %>% kable_styling(c("striped", "condensed"))
+} else {
+  cat(paste0("There are no annotated genes overlapping the SVs identified in this analysis."))
+}
 ```
 
 
@@ -343,8 +359,14 @@ Much of the vertebrate genome is composed of repeated DNA sequence elements. Dif
 
 ```{r RepeatMasker, echo=FALSE, message=FALSE, warning=FALSE, results='hide'} 
 
-RepeatGR <- RepeatMaskerGR()
+RepeatGR <- RepeatMaskerGR(RepeatMaskerSRC = RepeatDB)
+# the RepeatMasker code has been hg19 centric - chr name chr prefix has been stripped in most cases
+# if we are working with a genome that has chr prefix - put it back
 SV <- Vcf2GRanges(vcfFile)
+if (length(grep("chr", seqlevels(SV)))>0) {
+  seqlevels(RepeatGR) <- paste0("chr", seqlevels(RepeatGR))
+}
+
 seqlengths(SV) <- getSeqLengths(names(seqlengths(SV)))
 
 overlaps <- findOverlaps(RepeatGR, SV)
@@ -385,14 +407,19 @@ Software such as [Truvari](https://github.com/spiralgenetics/truvari/) has been 
 
 ```{r truthset, echo=FALSE}
 
-truvariJson <- fromJSON(file.path("Analysis", sample_name, "evaluation_summary.json"))
-
-infographicFile3 <- infoGraphicPlot3(identifier="truthset_validation", 
-                 panelA=c(key="Precision",   value=round(truvariJson$precision, digits=3), icon="fa-dot-circle-o"), 
-                 panelB=c(key="Recall",    value=round(truvariJson$recall, digits=3), icon="fa-braille"), 
-                 panelC=c(key="F1 score", value=round(truvariJson$f1, digits=3), icon="fa-percent"))
-
- knitr::include_graphics(infographicFile3)
+jsonFile <- file.path("Analysis", sample_name, "evaluation_summary.json")
+if (file.exists(jsonFile)) {
+  truvariJson <- fromJSON(jsonFile)
+  
+  infographicFile3 <- infoGraphicPlot3(identifier="truthset_validation", 
+                   panelA=c(key="Precision",   value=round(truvariJson$precision, digits=3), icon="fa-dot-circle-o"), 
+                   panelB=c(key="Recall",    value=round(truvariJson$recall, digits=3), icon="fa-braille"), 
+                   panelC=c(key="F1 score", value=round(truvariJson$f1, digits=3), icon="fa-percent"))
+  
+  knitr::include_graphics(infographicFile3)
+} else {
+  cat(paste0("The truvari benchmark data has not been calculated for this dataset."))
+}
 ```
 
 * **`precision`** is the fraction of SVs identified that are correct (a background of false positive SVs will reduce the precision score)
@@ -407,19 +434,19 @@ The Integrative Genomics Viewer (**`IGV`**) is a tool (@10.1093/bib/bbs017, @Rob
 
 ![](Static/Images/IGV_homozygous_insertion_chr20.PNG)
 
-The figure above presents a screenshot from the **`IGV`** software. This presents a 265 nucleotide insertion that is present in the filtered high-quality SVs. In the centre region of the viewer the insertion event is displayed. The blue and pink shading reveals that reads are mapping to both the forward and reverse strands of the reference DNA - the insertion is observed across all reads and is therefore a probable homozygous insertion.
+The figure above presents a screenshot from the **`IGV`** software. This has been selected as a 1.5kb insertion from the filtered high-quality SVs. In the centre region of the viewer the insertion event is displayed. The blue and pink shading reveals that reads are mapping to both the forward and reverse strands of the reference DNA - the insertion is observed across all reads and is therefore a probable homozygous insertion.
 
-IGV can also view deletions - the figure below shows a candidate 182 bp heterozygous deletion. There is good read support for this deletion and it has also been sampled from both DNA sequence strands.
+IGV can also view deletions - the figure below shows what could be a 182 bp heterozygous deletion. There is good read support for this deletion and the deletion has been sampled from both DNA sequence strands.
 
 ![](Static/Images/IGV_heterozygous_deletion_chr20.PNG)
 
 **`IGV`** can be started from the command line by using the command `igv`.
 
-We would like to explore the read mapping information around the SV located within the **SEMG1** gene identified earlier in the tutorial document. The command below will open the **`IGV`** browser to the appropriate genome coordinates - in this example we are using the feature with coordinates `[Chr 20] Start=43835839, Stop=43838021` - this corresponds to a region 1kb up- and down-stream on the annotated deletion within the **`SEMG1`** gene - the plot displayed should look much the  deletion figure shown above. The **`-o prefs.properties`** option loads a file that configures the **`IGV`** software. This masks small INDELs and shades the sequence reads by strand. 
+We would like to explore the read mapping information around the SV located within the **SEMG1** gene identified earlier in the tutorial document. The command below will open the **`IGV`** browser to the appropriate genome coordinates - in this example we are using the feature with coordinates `[Chr 20] Start=43835839, Stop=43838021` - this corresponds to a region 1kb up- and down-stream on the annotated deletion within the **`SEMG1`** gene - the plot displayed should look much the  deletion figure shown above.
 
 
 ```
-igv -o ./Static/prefs.properties -g ./ReferenceData/human_g1k_v37_chr20_50M.fasta \
+igv -g ./ReferenceData/human_g1k_v37_chr20_50M.fasta \
     ./Analysis/GM24385.nf7.chr20_af/alignment/GM24385.nf7.chr20_af_minimap2.bam \
     20:43835839-43838021
 
